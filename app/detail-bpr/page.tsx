@@ -30,6 +30,7 @@ interface BprDetailRecord {
 }
 
 export default function DetailBPRPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bprList, setBprList] = useState<string[]>([]);
   const [selectedBpr, setSelectedBpr] = useState<string>("BPR Angga");
   const [bprRecords, setBprRecords] = useState<BprDetailRecord[]>([]);
@@ -55,6 +56,7 @@ export default function DetailBPRPage() {
       }
     }
     fetchBprNames();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 2. Ambil data historis (2021-2025) untuk BPR yang sedang dipilih
@@ -110,12 +112,12 @@ export default function DetailBPRPage() {
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        <Header />
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
+        <Header onOpenSidebar={() => setSidebarOpen(true)} />
 
-        <main className="p-6 space-y-6">
+        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
           {/* Header & Pilihan BPR Modern */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
             <div>
@@ -133,7 +135,7 @@ export default function DetailBPRPage() {
             </div>
 
             {/* Tombol Pilih BPR Interaktif */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
               <span className="text-xs font-semibold text-slate-400 mr-1">
                 Pilih BPR:
               </span>
@@ -143,7 +145,7 @@ export default function DetailBPRPage() {
                   <button
                     key={bprName}
                     onClick={() => setSelectedBpr(bprName)}
-                    className={`text-xs px-3.5 py-2 rounded-xl font-bold transition-all border ${
+                    className={`text-xs px-3.5 py-2 rounded-xl font-bold transition-all border cursor-pointer ${
                       isActive
                         ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20"
                         : "bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-slate-100"
@@ -157,7 +159,7 @@ export default function DetailBPRPage() {
           </div>
 
           {/* Kartu Ringkasan Profil BPR Terpilih */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             {/* Kartu 1: Lembaga Terpilih */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
               <div>
@@ -165,10 +167,10 @@ export default function DetailBPRPage() {
                   Lembaga Terpilih
                 </div>
                 <div className="text-xl font-extrabold text-slate-800 mt-2 flex items-center space-x-2.5">
-                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600 shrink-0">
                     <Building2 size={20} />
                   </div>
-                  <span>{selectedBpr}</span>
+                  <span className="truncate">{selectedBpr}</span>
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
@@ -196,9 +198,9 @@ export default function DetailBPRPage() {
                     }`}
                   >
                     {currentStatus === "HIGH ATTENTION" ? (
-                      <AlertTriangle size={14} />
+                      <AlertTriangle size={14} className="shrink-0" />
                     ) : (
-                      <CheckCircle size={14} />
+                      <CheckCircle size={14} className="shrink-0" />
                     )}
                     <span>{currentStatus}</span>
                   </span>
@@ -226,7 +228,7 @@ export default function DetailBPRPage() {
                           : "bg-blue-100 text-blue-700 border border-blue-200"
                     }`}
                   >
-                    <ShieldAlert size={14} />
+                    <ShieldAlert size={14} className="shrink-0" />
                     <span>Dominan {currentTrend}</span>
                   </span>
                 </div>
@@ -238,8 +240,8 @@ export default function DetailBPRPage() {
           </div>
 
           {/* Tabel Detail Indikator Keuangan Historis */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
                   Rincian Historis 11 Indikator Keuangan — {selectedBpr}
@@ -249,25 +251,25 @@ export default function DetailBPRPage() {
                   (2025).
                 </p>
               </div>
-              <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl">
+              <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl shrink-0">
                 {loading ? "Memuat Data..." : "Database Terverifikasi"}
               </span>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="w-full text-center text-xs border-collapse">
+              <table className="w-full text-center text-xs border-collapse min-w-[650px]">
                 <thead>
                   <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-200/80">
                     <th className="py-3.5 px-4 text-left border-r border-slate-200/60 font-bold uppercase tracking-wider text-[11px]">
                       Indikator Keuangan
                     </th>
-                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold">
+                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-32">
                       Nilai 2021
                     </th>
-                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold">
+                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-32">
                       Nilai 2025
                     </th>
-                    <th className="py-3.5 px-4 font-bold">Arah Tren</th>
+                    <th className="py-3.5 px-4 font-bold w-36">Arah Tren</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
@@ -284,7 +286,6 @@ export default function DetailBPRPage() {
                     { label: "LDR (%)", key: "ldr" },
                     { label: "Cash Ratio (%)", key: "cash_ratio" },
                   ].map((row, idx) => {
-                    // Ambil nilai dengan aman menggunakan Record<string, any>
                     const rec21 = record2021 as unknown as Record<
                       string,
                       string | number
@@ -324,7 +325,7 @@ export default function DetailBPRPage() {
                             : String(val2025)}
                         </td>
                         <td className="py-3 px-4 font-semibold">
-                          <span className="inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
+                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">
                             {currentTrend}
                           </span>
                         </td>

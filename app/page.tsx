@@ -8,17 +8,16 @@ import ReviewPriority from "./components/ReviewPriority";
 import { supabase } from "./lib/supabase";
 import { Activity, AlertTriangle, Search } from "lucide-react";
 
-interface BprSummaryRecord {
-  bpr_name: string;
-  status: string;
-  evaluation_note?: string;
-  deep_dive_area?: string;
+interface BprSummaryItem {
+  id: string;
+  name: string;
+  evaluationNote: string;
+  deepDiveArea: string;
 }
 
 export default function DashboardPage() {
-  const [bprList, setBprList] = useState<
-    { id: string; name: string; evaluationNote: string; deepDiveArea: string }[]
-  >([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bprList, setBprList] = useState<BprSummaryItem[]>([]);
   const [selectedBprId, setSelectedBprId] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -34,8 +33,7 @@ export default function DashboardPage() {
       if (error) {
         console.error("Gagal memuat data dasbor:", error);
       } else if (data && data.length > 0) {
-        // Petakan data dari Supabase menjadi list BPR yang bersih
-        const formattedList = data.map((item, index) => ({
+        const formattedList: BprSummaryItem[] = data.map((item, index) => ({
           id: `bpr-${index}`,
           name: item.bpr_name,
           evaluationNote:
@@ -70,9 +68,9 @@ export default function DashboardPage() {
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
-      <Sidebar />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        <Header />
+        <Header onOpenSidebar={() => setSidebarOpen(true)} />
         <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
           {/* Header Ringkas / Overview Atas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

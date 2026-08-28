@@ -106,13 +106,13 @@ export default function SummaryTable() {
             <tr className="bg-slate-900 text-white border-b border-slate-800">
               <th
                 rowSpan={2}
-                className="py-3 px-2 border-r border-slate-800 font-bold w-12 sticky left-0 bg-slate-900 z-20"
+                className="py-3 px-2 border-r border-slate-800 font-bold w-12 sticky left-0 bg-slate-900 z-30"
               >
                 No
               </th>
               <th
                 rowSpan={2}
-                className="py-3 px-3 border-r border-slate-800 font-bold text-left min-w-[130px] sticky left-12 bg-slate-900 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]"
+                className="py-3 px-3 border-r border-slate-800 font-bold text-left w-36 min-w-[140px] sticky left-12 bg-slate-900 z-30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.6)]"
               >
                 BPR
               </th>
@@ -164,7 +164,10 @@ export default function SummaryTable() {
               >
                 Cash Ratio (%)
               </th>
-              <th rowSpan={2} className="py-3 px-4 font-bold bg-slate-900">
+              <th
+                rowSpan={2}
+                className="py-3 px-4 font-bold bg-slate-900 min-w-[130px]"
+              >
                 Trend Dominan
               </th>
             </tr>
@@ -201,10 +204,10 @@ export default function SummaryTable() {
                     key={item.id}
                     className={`transition-colors hover:bg-blue-50/40 ${isEven ? "bg-white" : "bg-slate-50/50"}`}
                   >
-                    <td className="py-3 px-2 border-r border-slate-200/80 font-bold text-slate-400 sticky left-0 bg-inherit z-10">
+                    <td className="py-3 px-2 border-r border-slate-200/80 font-bold text-slate-400 w-12 sticky left-0 bg-white z-20">
                       {index + 1}
                     </td>
-                    <td className="py-3 px-3 border-r border-slate-200/80 font-extrabold text-slate-800 text-left sticky left-12 bg-inherit z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] whitespace-nowrap">
+                    <td className="py-3 px-3 border-r border-slate-200/80 font-extrabold text-slate-800 text-left w-36 min-w-[140px] sticky left-12 bg-white z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] whitespace-nowrap">
                       {item.name}
                     </td>
 

@@ -27,7 +27,7 @@ export default function ReviewPriority() {
       } else if (data) {
         // Petakan data dari database ke format tampilan
         const mapped: ReviewItem[] = data.map(
-          (row: Record<string, unknown>, index: number) => {
+          (row: Record<string, unknown>) => {
             const name = row.bpr_name as string;
             const status =
               (row.status as "HIGH ATTENTION" | "WATCH" | "STABLE") || "STABLE";

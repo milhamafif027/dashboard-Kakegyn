@@ -1,34 +1,51 @@
 "use client";
-import { Calendar, ShieldCheck } from "lucide-react";
+import { Calendar, ShieldCheck, Menu } from "lucide-react";
 
-export default function Header() {
+interface HeaderProps {
+  onOpenSidebar?: () => void;
+}
+
+export default function Header({ onOpenSidebar }: HeaderProps) {
   return (
-    <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-6 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sticky top-0 z-10 shadow-2xs">
-      {/* Judul Utama */}
-      <div>
-        <div className="flex items-center space-x-2">
-          <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-          <span className="text-[11px] font-bold text-blue-600 tracking-wider uppercase">
-            OJK • Pengawasan BPR
-          </span>
+    <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-6 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sticky top-0 z-30 shadow-2xs">
+      {/* Judul Utama & Tombol Menu Mobile */}
+      <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
+        <div className="flex items-center space-x-2.5">
+          {/* Tombol Hamburger khusus mobile */}
+          <button
+            onClick={onOpenSidebar}
+            className="md:hidden text-slate-600 hover:text-slate-900 p-2 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+            aria-label="Buka Menu"
+          >
+            <Menu size={20} />
+          </button>
+
+          <div>
+            <div className="flex items-center space-x-2">
+              <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+              <span className="text-[11px] font-bold text-blue-600 tracking-wider uppercase">
+                OJK • Pengawasan BPR
+              </span>
+            </div>
+            <h1 className="text-sm sm:text-lg font-extrabold text-slate-800 tracking-tight mt-0.5">
+              Analisis & Evaluasi Keuangan BPR
+            </h1>
+          </div>
         </div>
-        <h1 className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight mt-0.5">
-          Analisis & Evaluasi Keuangan BPR
-        </h1>
       </div>
 
       {/* Bagian Kanan: Periode & Profil */}
       <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
         {/* Periode Badge */}
         <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs text-slate-700">
-          <Calendar size={14} className="text-blue-600" />
+          <Calendar size={14} className="text-blue-600 shrink-0" />
           <span className="text-slate-400 font-medium">Periode:</span>
           <span className="font-bold text-slate-800">2021-2025</span>
         </div>
 
         {/* Profil Pengawas Minimalis */}
         <div className="flex items-center space-x-2 pl-3 border-l border-slate-200">
-          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20">
+          <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/20 shrink-0">
             <ShieldCheck size={16} />
           </div>
           <div className="hidden md:block text-left">
