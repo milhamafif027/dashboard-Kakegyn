@@ -55,8 +55,8 @@ export default function PerbandinganBPRPage() {
         setAllBprData(records);
         const names = records.map((r) => r.bpr_name);
         setAvailableBprs(names);
-        // Default pilih 3 BPR pertama untuk perbandingan head-to-head
-        setSelectedBprs(names.slice(0, 3));
+        // Default pilih beberapa BPR pertama untuk perbandingan awal
+        setSelectedBprs(names.slice(0, 4));
       }
       setLoading(false);
     }
@@ -66,13 +66,13 @@ export default function PerbandinganBPRPage() {
 
   const handleCheckboxChange = (bprName: string) => {
     if (selectedBprs.includes(bprName)) {
+      // Izinkan uncheck selama masih ada minimal 1 BPR yang dipilih
       if (selectedBprs.length > 1) {
         setSelectedBprs(selectedBprs.filter((item) => item !== bprName));
       }
     } else {
-      if (selectedBprs.length < 4) {
-        setSelectedBprs([...selectedBprs, bprName]);
-      }
+      // Batas maksimal dihapus agar bisa memilih lebih dari 4 BPR secara bebas
+      setSelectedBprs([...selectedBprs, bprName]);
     }
   };
 
@@ -108,7 +108,7 @@ export default function PerbandinganBPRPage() {
                 Perbandingan Kinerja Keuangan BPR
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Pilih maksimal 4 entitas BPR untuk evaluasi head-to-head
+                Pilih entitas BPR secara fleksibel untuk evaluasi head-to-head
                 indikator utama tahun 2025.
               </p>
             </div>
@@ -138,7 +138,7 @@ export default function PerbandinganBPRPage() {
             </div>
           </div>
 
-          {/* Tabel Komparasi Head-to-Head */}
+          {/* Tabel Komparasi Head-to-Head dengan Horizontal Scroll */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-bold text-slate-800">
@@ -151,17 +151,18 @@ export default function PerbandinganBPRPage() {
               </span>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="w-full text-center text-xs border-collapse">
+            {/* Container Horizontal Scroll */}
+            <div className="overflow-x-auto rounded-xl border border-slate-100 pb-2">
+              <table className="w-full text-center text-xs border-collapse min-w-[700px]">
                 <thead>
-                  <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-200/80">
-                    <th className="py-3.5 px-4 text-left border-r border-slate-200/60 font-bold uppercase tracking-wider text-[11px]">
+                  <tr className="bg-slate-50/90 text-slate-500 border-b border-slate-200/80">
+                    <th className="py-3.5 px-4 text-left border-r border-slate-200/60 font-bold uppercase tracking-wider text-[11px] sticky left-0 bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                       Indikator Keuangan
                     </th>
                     {filteredData.map((bpr) => (
                       <th
                         key={bpr.bpr_name}
-                        className="py-3.5 px-4 border-r border-slate-200/60 font-extrabold text-slate-800"
+                        className="py-3.5 px-4 border-r border-slate-200/60 font-extrabold text-slate-800 whitespace-nowrap min-w-[140px]"
                       >
                         <div className="text-sm">{bpr.bpr_name}</div>
                         <div className="mt-1">
@@ -225,7 +226,7 @@ export default function PerbandinganBPRPage() {
                       key={idx}
                       className="hover:bg-slate-50/70 transition-colors"
                     >
-                      <td className="py-3 px-4 text-left font-semibold text-slate-600 border-r border-slate-100">
+                      <td className="py-3 px-4 text-left font-semibold text-slate-600 border-r border-slate-100 sticky left-0 bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] whitespace-nowrap">
                         {row.label}
                       </td>
                       {filteredData.map((bpr) => {
@@ -240,7 +241,7 @@ export default function PerbandinganBPRPage() {
                         return (
                           <td
                             key={bpr.bpr_name}
-                            className={`py-3 px-4 border-r border-slate-100 font-bold ${
+                            className={`py-3 px-4 border-r border-slate-100 font-bold whitespace-nowrap ${
                               isAlert
                                 ? "text-red-600 bg-red-50/40"
                                 : "text-slate-800"
@@ -257,13 +258,13 @@ export default function PerbandinganBPRPage() {
 
                   {/* Baris Tren Dominan */}
                   <tr className="bg-slate-50/50">
-                    <td className="py-3.5 px-4 text-left font-bold text-slate-800 border-r border-slate-100">
+                    <td className="py-3.5 px-4 text-left font-bold text-slate-800 border-r border-slate-100 sticky left-0 bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] whitespace-nowrap">
                       Trend Dominan
                     </td>
                     {filteredData.map((bpr) => (
                       <td
                         key={bpr.bpr_name}
-                        className="py-3.5 px-4 border-r border-slate-100"
+                        className="py-3.5 px-4 border-r border-slate-100 whitespace-nowrap"
                       >
                         <span
                           className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider inline-block ${
