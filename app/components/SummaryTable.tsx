@@ -71,7 +71,12 @@ export default function SummaryTable() {
           }
         });
 
-        setBprData(Object.values(grouped));
+        // Urutkan data berdasarkan nama BPR agar posisinya stabil
+        const sortedData = Object.values(grouped).sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
+
+        setBprData(sortedData);
       }
       setLoading(false);
     }
@@ -164,10 +169,7 @@ export default function SummaryTable() {
               >
                 Cash Ratio (%)
               </th>
-              <th
-                rowSpan={2}
-                className="py-3 px-4 font-bold bg-slate-900 min-w-[130px]"
-              >
+              <th rowSpan={2} className="py-3 px-4 font-bold bg-slate-900 min-w-[130px]">
                 Trend Dominan
               </th>
             </tr>
@@ -195,14 +197,13 @@ export default function SummaryTable() {
               </tr>
             ) : (
               bprData.map((item, index) => {
-                const isEven = index % 2 === 0;
                 const isMembaik = item.dominantTrend === "Membaik";
                 const isMemburuk = item.dominantTrend === "Memburuk";
 
                 return (
                   <tr
                     key={item.id}
-                    className={`transition-colors hover:bg-blue-50/40 ${isEven ? "bg-white" : "bg-slate-50/50"}`}
+                    className="transition-colors hover:bg-blue-50/40 bg-white"
                   >
                     <td className="py-3 px-2 border-r border-slate-200/80 font-bold text-slate-400 w-12 sticky left-0 bg-white z-20">
                       {index + 1}

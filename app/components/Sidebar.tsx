@@ -38,17 +38,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Backdrop untuk mobile saat sidebar terbuka */}
+      {/* Backdrop transparan khusus mobile saat sidebar terbuka */}
       {isOpen && (
         <div
           onClick={onClose}
-          className="fixed inset-0 bg-slate-900/50 z-40 md:hidden backdrop-blur-xs transition-opacity"
+          className="fixed inset-0 bg-slate-900/60 z-40 md:hidden backdrop-blur-xs transition-opacity"
         />
       )}
 
-      {/* Konten Sidebar */}
+      {/* Konten Sidebar dengan Z-Index Tinggi */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-68 h-screen bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 border-r border-slate-800 shadow-xl select-none transition-transform duration-300 ease-in-out ${
+        className={`fixed md:static inset-y-0 left-0 z-50 w-68 h-screen bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 border-r border-slate-800 shadow-2xl select-none transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
@@ -78,7 +78,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Tombol silang khusus mobile */}
             <button
               onClick={onClose}
-              className="md:hidden text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition"
+              className="md:hidden text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+              aria-label="Tutup Menu"
             >
               <X size={20} />
             </button>
@@ -98,8 +99,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={onClose}
-                  className={`group flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                  onClick={onClose} // <-- Memastikan sidebar otomatis tertutup saat menu diklik
+                  className={`group flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
                     isActive
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold"
                       : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200"
