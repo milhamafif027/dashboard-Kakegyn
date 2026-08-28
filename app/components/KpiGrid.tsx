@@ -252,7 +252,7 @@ export default function KpiGrid({
     }
 
     fetchKpiMetrics();
-  }, [s, e]);
+  }, [s, e, yearsList]);
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 select-none">
