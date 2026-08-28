@@ -20,7 +20,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
-  // Menu navigasi setelah Analisis Tren dan Dokumen terpisah dihapus/digabungkan
+  // Menu navigasi dengan tambahan Detail Dokumen
   const menuItems = [
     { name: "Dashboard Utama", href: "/", icon: LayoutDashboard },
     {
@@ -31,6 +31,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Perbandingan BPR", href: "/perbandingan", icon: BarChart2 },
     { name: "Detail BPR", href: "/detail-bpr", icon: Database },
     { name: "Laporan Pengawasan", href: "/laporan", icon: FileText },
+    { name: "Informasi Dokumen", href: "/dokumen", icon: FileText }, 
   ];
 
   return (
