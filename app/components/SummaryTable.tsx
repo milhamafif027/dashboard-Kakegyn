@@ -36,7 +36,6 @@ export default function SummaryTable() {
       if (error) {
         console.error("Gagal memuat data tabel:", error);
       } else if (data) {
-        // Gunakan Record<string, BprRowData> alih-alih 'any'
         const grouped: Record<string, BprRowData> = {};
 
         data.forEach((row: Record<string, unknown>) => {
@@ -81,12 +80,12 @@ export default function SummaryTable() {
   }, []);
 
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 select-none">
+    <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/85 shadow-xs space-y-4 select-none">
       {/* Header Judul Komponen */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
         <div>
           <h2 className="text-sm font-extrabold text-slate-800 tracking-tight flex items-center space-x-2">
-            <Building2 size={16} className="text-blue-600" />
+            <Building2 size={16} className="text-blue-600 shrink-0" />
             <span>RINGKASAN INDIKATOR KEUANGAN PER BPR (2021 - 2025)</span>
           </h2>
           <p className="text-xs text-slate-400 mt-0.5">
@@ -94,26 +93,26 @@ export default function SummaryTable() {
             (Live Supabase).
           </p>
         </div>
-        <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl uppercase tracking-wider">
+        <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl uppercase tracking-wider shrink-0">
           {loading ? "Memuat Data..." : "Database Connected"}
         </span>
       </div>
 
-      {/* Kontainer Tabel dengan Border Melengkung */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200/80 shadow-2xs">
-        <table className="w-full text-center text-xs border-collapse">
+      {/* Kontainer Tabel dengan Horizontal Scroll yang Aman */}
+      <div className="overflow-x-auto rounded-xl border border-slate-200/80 shadow-2xs pb-2">
+        <table className="w-full text-center text-xs border-collapse min-w-[950px]">
           <thead>
             {/* Header Utama Kolom */}
             <tr className="bg-slate-900 text-white border-b border-slate-800">
               <th
                 rowSpan={2}
-                className="py-3 px-2 border-r border-slate-800 font-bold w-12"
+                className="py-3 px-2 border-r border-slate-800 font-bold w-12 sticky left-0 bg-slate-900 z-20"
               >
                 No
               </th>
               <th
                 rowSpan={2}
-                className="py-3 px-3 border-r border-slate-800 font-bold text-left min-w-[110px]"
+                className="py-3 px-3 border-r border-slate-800 font-bold text-left min-w-[130px] sticky left-12 bg-slate-900 z-20 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.5)]"
               >
                 BPR
               </th>
@@ -181,13 +180,13 @@ export default function SummaryTable() {
           <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
             {loading ? (
               <tr>
-                <td colSpan={19} className="py-6 text-center text-slate-400">
+                <td colSpan={19} className="py-8 text-center text-slate-400">
                   Menyinkronkan data dari basis data Supabase...
                 </td>
               </tr>
             ) : bprData.length === 0 ? (
               <tr>
-                <td colSpan={19} className="py-6 text-center text-slate-400">
+                <td colSpan={19} className="py-8 text-center text-slate-400">
                   Tidak ada data ditemukan di tabel Supabase.
                 </td>
               </tr>
@@ -202,87 +201,87 @@ export default function SummaryTable() {
                     key={item.id}
                     className={`transition-colors hover:bg-blue-50/40 ${isEven ? "bg-white" : "bg-slate-50/50"}`}
                   >
-                    <td className="py-3 px-2 border-r border-slate-200/80 font-bold text-slate-400">
+                    <td className="py-3 px-2 border-r border-slate-200/80 font-bold text-slate-400 sticky left-0 bg-inherit z-10">
                       {index + 1}
                     </td>
-                    <td className="py-3 px-3 border-r border-slate-200/80 font-extrabold text-slate-800 text-left">
+                    <td className="py-3 px-3 border-r border-slate-200/80 font-extrabold text-slate-800 text-left sticky left-12 bg-inherit z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] whitespace-nowrap">
                       {item.name}
                     </td>
 
                     {/* KPMM */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.kpmm[2021]?.toFixed(2) ?? "-"}
                     </td>
                     <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold ${isMembaik ? "text-emerald-600 bg-emerald-50/30" : "text-slate-800"}`}
+                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${isMembaik ? "text-emerald-600 bg-emerald-50/30" : "text-slate-800"}`}
                     >
                       {item.kpmm[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* NPL Gross */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.npl[2021]?.toFixed(2) ?? "-"}
                     </td>
                     <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold ${(item.npl[2025] ?? 0) > 5 ? "text-red-600 bg-red-50/60" : "text-slate-800"}`}
+                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${(item.npl[2025] ?? 0) > 5 ? "text-red-600 bg-red-50/60" : "text-slate-800"}`}
                     >
                       {item.npl[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* Cadangan/PPKA */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.ppka[2021]?.toFixed(2) ?? "-"}
                     </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800">
+                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
                       {item.ppka[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* ROA */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.roa[2021]?.toFixed(2) ?? "-"}
                     </td>
                     <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold ${isMembaik ? "text-emerald-600 bg-emerald-50/30" : "text-slate-800"}`}
+                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${isMembaik ? "text-emerald-600 bg-emerald-50/30" : "text-slate-800"}`}
                     >
                       {item.roa[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* BOPO */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.bopo[2021]?.toFixed(2) ?? "-"}
                     </td>
                     <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold ${(item.bopo[2025] ?? 0) > 90 ? "text-red-600 bg-red-50/60" : "text-slate-800"}`}
+                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${(item.bopo[2025] ?? 0) > 90 ? "text-red-600 bg-red-50/60" : "text-slate-800"}`}
                     >
                       {item.bopo[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* NIM */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.nim[2021]?.toFixed(2) ?? "-"}
                     </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800">
+                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
                       {item.nim[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* LDR */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.ldr[2021]?.toFixed(2) ?? "-"}
                     </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800">
+                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
                       {item.ldr[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* Cash Ratio */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400">
+                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
                       {item.cashRatio[2021]?.toFixed(2) ?? "-"}
                     </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800">
+                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
                       {item.cashRatio[2025]?.toFixed(2) ?? "-"}
                     </td>
 
                     {/* Trend Dominan */}
-                    <td className="py-3 px-3">
+                    <td className="py-3 px-3 whitespace-nowrap">
                       <span
                         className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${
                           isMemburuk

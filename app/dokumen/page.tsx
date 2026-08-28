@@ -14,19 +14,19 @@ export default function DokumenPedomanPage() {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
       <Sidebar />
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
         <Header />
-        <main className="p-6 space-y-6 max-w-5xl mx-auto w-full">
+        <main className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full">
           {/* Header */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs flex items-center space-x-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+          <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl shrink-0">
               <BookOpen size={28} />
             </div>
             <div>
               <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">
                 Tab Dokumen Eksekutif
               </div>
-              <h2 className="text-xl font-extrabold text-slate-800">
+              <h2 className="text-lg md:text-xl font-extrabold text-slate-800">
                 Pedoman Analisis Tren Keuangan BPR
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
@@ -37,11 +37,11 @@ export default function DokumenPedomanPage() {
           </div>
 
           {/* Konten Dokumen */}
-          <div className="bg-white p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-8 text-xs text-slate-700 leading-relaxed">
+          <div className="bg-white p-5 sm:p-8 rounded-2xl border border-slate-200/80 shadow-xs space-y-8 text-xs text-slate-700 leading-relaxed">
             {/* 1. Pendahuluan */}
             <section className="space-y-2">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2 border-b border-slate-100 pb-2">
-                <FileText size={16} className="text-blue-600" />
+                <FileText size={16} className="text-blue-600 shrink-0" />
                 <span>1. Pendahuluan</span>
               </h3>
               <p>
@@ -57,7 +57,7 @@ export default function DokumenPedomanPage() {
             {/* 2. Komponen Penilaian & Indikator */}
             <section className="space-y-2">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2 border-b border-slate-100 pb-2">
-                <Layers size={16} className="text-blue-600" />
+                <Layers size={16} className="text-blue-600 shrink-0" />
                 <span>
                   2. Komponen Penilaian & Indikator Keuangan (8 Indikator Utama)
                 </span>
@@ -96,62 +96,61 @@ export default function DokumenPedomanPage() {
             {/* 3. Rumus & Kalkulasi */}
             <section className="space-y-2">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2 border-b border-slate-100 pb-2">
-                <Calculator size={16} className="text-blue-600" />
+                <Calculator size={16} className="text-blue-600 shrink-0" />
                 <span>3. Rumus dan Kalkulasi</span>
               </h3>
               <p>
                 Menyimpan data pembentuk rasio (kredit, laba, aset, modal, DPK)
                 serta hasil perhitungan rasio dan perubahan antarperiode (dalam{" "}
                 <em>percentage point</em>), contoh: NPL periode lalu 3,5% dan
-                berjalan 4,2% (perubahan +0.7 pp)[cite: 1].
+                berjalan 4,2% (perubahan +0.7 pp).
               </p>
             </section>
 
             {/* 4. Kategorisasi Hasil Evaluasi */}
             <section className="space-y-2">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2 border-b border-slate-100 pb-2">
-                <CheckCircle2 size={16} className="text-blue-600" />
+                <CheckCircle2 size={16} className="text-blue-600 shrink-0" />
                 <span>4. Kategorisasi Hasil Evaluasi</span>
               </h3>
               <p>
                 Kategorisasi arah tren meliputi <strong>Meningkat (↑)</strong>,{" "}
                 <strong>Menurun (↓)</strong>, <strong>Stabil (→)</strong>, dan{" "}
-                <strong>Perlu Perhatian (▲)</strong>[cite: 1]. Kategori perlu
-                perhatian bukan berarti BPR bermasalah, melainkan memerlukan
-                pendalaman pengawas lebih lanjut berdasarkan konsistensi dan
-                besaran perubahan[cite: 1].
+                <strong>Perlu Perhatian (▲)</strong>. Kategori perlu perhatian
+                bukan berarti BPR bermasalah, melainkan memerlukan pendalaman
+                pengawas lebih lanjut berdasarkan konsistensi dan besaran
+                perubahan.
               </p>
             </section>
 
             {/* 5. Ketentuan Analisis Tren */}
             <section className="space-y-2">
               <h3 className="text-sm font-extrabold text-slate-900 flex items-center space-x-2 border-b border-slate-100 pb-2">
-                <Shield size={16} className="text-blue-600" />
+                <Shield size={16} className="text-blue-600 shrink-0" />
                 <span>
                   5. Ketentuan Analisis Tren Keuangan (Dasar Regulasi OJK)
                 </span>
               </h3>
-              <ul className="space-y-1.5 text-slate-600 list-disc list-inside">
+              <ul className="space-y-2 text-slate-600 list-disc list-inside">
                 <li>
                   <strong>POJK 23 Tahun 2024:</strong> Pelaporan melalui sistem
-                  pelaporan OJK dan transparansi kondisi keuangan BPR/BPRS[cite:
-                  1].
+                  pelaporan OJK dan transparansi kondisi keuangan BPR/BPRS.
                 </li>
                 <li>
                   <strong>POJK 28 Tahun 2023:</strong> Penetapan status dan
-                  tindak lanjut pengawasan BPR/BPRS[cite: 1].
+                  tindak lanjut pengawasan BPR/BPRS.
                 </li>
                 <li>
                   <strong>POJK 1 Tahun 2024:</strong> Kualitas aset BPR dan
-                  pencadangan[cite: 1].
+                  pencadangan.
                 </li>
                 <li>
                   <strong>POJK 3 Tahun 2022 & SEOJK 11/SEOJK.03/2022:</strong>{" "}
-                  Penilaian tingkat kesehatan BPR/BPRS[cite: 1].
+                  Penilaian tingkat kesehatan BPR/BPRS.
                 </li>
                 <li>
                   <strong>POJK 7 Tahun 2026:</strong> Ketentuan terbaru terkait
-                  KPMM dan pemenuhan modal inti minimum[cite: 1].
+                  KPMM dan pemenuhan modal inti minimum.
                 </li>
               </ul>
             </section>

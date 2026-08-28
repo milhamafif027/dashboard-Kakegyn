@@ -31,8 +31,8 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-68 bg-slate-900 text-slate-300 flex flex-col justify-between hidden md:flex border-r border-slate-800 shadow-xl select-none">
-      <div>
+    <aside className="w-68 h-screen bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 border-r border-slate-800 shadow-xl select-none">
+      <div className="flex-1 overflow-y-auto">
         {/* Header Identitas OJK */}
         <div className="p-5 flex items-center space-x-3.5 border-b border-slate-800/80 bg-slate-900 relative">
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600"></div>
@@ -102,7 +102,7 @@ export default function Sidebar() {
       </div>
 
       {/* Footer / Status Sistem */}
-      <div className="p-4 border-t border-slate-800 bg-slate-950">
+      <div className="p-4 border-t border-slate-800 bg-slate-950 shrink-0">
         <div className="flex items-center justify-between text-[11px]">
           <div className="flex items-center space-x-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

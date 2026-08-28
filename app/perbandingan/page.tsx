@@ -93,12 +93,12 @@ export default function PerbandinganBPRPage() {
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
         <Header />
 
-        <main className="p-6 space-y-6">
-          {/* Header Judul & Filter BPR Modern */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <main className="p-4 md:p-6 space-y-6">
+          {/* Header Judul & Filter BPR Modern & Responsif */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5">
             <div>
               <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
                 <SlidersHorizontal size={14} />
@@ -113,28 +113,30 @@ export default function PerbandinganBPRPage() {
               </p>
             </div>
 
-            {/* Filter Pemilihan BPR Interaktif */}
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-semibold text-slate-400 mr-1">
+            {/* Filter Pemilihan BPR Interaktif - Diperbaiki agar responsif & rapi */}
+            <div className="w-full xl:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200/60">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">
                 Filter BPR:
               </span>
-              {availableBprs.map((bprName) => {
-                const isSelected = selectedBprs.includes(bprName);
-                return (
-                  <button
-                    key={bprName}
-                    onClick={() => handleCheckboxChange(bprName)}
-                    className={`flex items-center space-x-1.5 text-xs px-3 py-2 rounded-xl font-bold transition-all border cursor-pointer ${
-                      isSelected
-                        ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20"
-                        : "bg-slate-50 text-slate-600 border-slate-200/80 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span>{bprName}</span>
-                    {isSelected && <Check size={13} className="stroke-[3]" />}
-                  </button>
-                );
-              })}
+              <div className="flex flex-wrap items-center gap-2 w-full">
+                {availableBprs.map((bprName) => {
+                  const isSelected = selectedBprs.includes(bprName);
+                  return (
+                    <button
+                      key={bprName}
+                      onClick={() => handleCheckboxChange(bprName)}
+                      className={`flex items-center space-x-1.5 text-xs px-3 py-2 rounded-xl font-bold transition-all border cursor-pointer ${
+                        isSelected
+                          ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20"
+                          : "bg-white text-slate-600 border-slate-200/80 hover:bg-slate-100"
+                      }`}
+                    >
+                      <span>{bprName}</span>
+                      {isSelected && <Check size={13} className="stroke-[3]" />}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

@@ -62,14 +62,14 @@ export default function LaporanPage() {
         <Sidebar />
       </div>
 
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
         <div className="print:hidden">
           <Header />
         </div>
 
-        <main className="p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
           {/* Header Modul Laporan (Hilang saat cetak) */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4 print:hidden">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden">
             <div>
               <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
                 <FileText size={14} />
@@ -85,11 +85,11 @@ export default function LaporanPage() {
             </div>
 
             {/* Aksi / Tombol Download & Print */}
-            <div className="flex items-center space-x-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
               <button
                 onClick={handleDownloadReport}
                 disabled={isExporting}
-                className="flex-1 md:flex-none flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-md shadow-blue-600/20 disabled:opacity-50 cursor-pointer"
+                className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-md shadow-blue-600/20 disabled:opacity-50 cursor-pointer"
               >
                 <Download size={15} />
                 <span>
@@ -124,7 +124,7 @@ export default function LaporanPage() {
           </div>
 
           {/* Kartu Ringkasan Statistik Laporan (Hilang saat cetak untuk efisiensi halaman) */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:hidden">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 print:hidden">
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
               <div>
                 <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
@@ -159,7 +159,7 @@ export default function LaporanPage() {
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between sm:col-span-2 lg:col-span-1">
               <div>
                 <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
                   Status Dokumen
@@ -178,8 +178,8 @@ export default function LaporanPage() {
           </div>
 
           {/* Preview Tabel Rekapitulasi Laporan */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 print:border-none print:shadow-none print:p-0">
-            <div className="flex justify-between items-center print:hidden">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 print:border-none print:shadow-none print:p-0">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 print:hidden">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
                   Pratinjau Ringkasan Eksekutif Portfolio BPR
@@ -195,7 +195,7 @@ export default function LaporanPage() {
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-100 print:border-slate-800">
-              <table className="w-full text-center text-xs border-collapse">
+              <table className="w-full text-center text-xs border-collapse min-w-[700px]">
                 <thead>
                   <tr className="bg-slate-900 text-white print:bg-slate-200 print:text-black border-b border-slate-800">
                     <th className="py-3 px-3 border-r border-slate-700 font-bold w-12">
@@ -247,10 +247,10 @@ export default function LaporanPage() {
                         <td className="py-3 px-3 border-r border-slate-200 text-slate-500 font-semibold">
                           {index + 1}
                         </td>
-                        <td className="py-3 px-4 text-left border-r border-slate-200 font-bold text-slate-900">
+                        <td className="py-3 px-4 text-left border-r border-slate-200 font-bold text-slate-900 whitespace-nowrap">
                           {item.bpr_name}
                         </td>
-                        <td className="py-3 px-4 border-r border-slate-200">
+                        <td className="py-3 px-4 border-r border-slate-200 whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                               item.status === "HIGH ATTENTION"
@@ -270,13 +270,13 @@ export default function LaporanPage() {
                               ? "Pertumbuhan kredit perlu pencadangan"
                               : "Kinerja keuangan stabil dan sehat"}
                         </td>
-                        <td className="py-3 px-4 border-r border-slate-200 font-bold text-slate-800">
+                        <td className="py-3 px-4 border-r border-slate-200 font-bold text-slate-800 whitespace-nowrap">
                           {item.kpmm}%
                         </td>
-                        <td className="py-3 px-4 border-r border-slate-200 font-bold text-red-600">
+                        <td className="py-3 px-4 border-r border-slate-200 font-bold text-red-600 whitespace-nowrap">
                           {item.npl}%
                         </td>
-                        <td className="py-3 px-4 font-bold">
+                        <td className="py-3 px-4 font-bold whitespace-nowrap">
                           <span
                             className={`px-2 py-0.5 rounded text-[10px] uppercase ${
                               item.dominant_trend === "Memburuk"

@@ -56,7 +56,7 @@ export default function InputDataPage() {
             : "STABLE",
         dominant_trend: parseFloat(npl) > 5 ? "Memburuk" : "Membaik",
       },
-      { onConflict: "bpr_name,tahun" }, // Pastikan kolom kombinasi unik atau sesuaikan primary key
+      { onConflict: "bpr_name,tahun" },
     );
 
     setIsSubmitting(false);
@@ -85,7 +85,7 @@ export default function InputDataPage() {
       setTimeout(() => {
         setIsUploading(false);
         setUploadSuccess(true);
-      }, 1500);
+      }, 1200);
     }
   };
 
@@ -93,12 +93,12 @@ export default function InputDataPage() {
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
         <Header />
 
-        <main className="p-6 space-y-6">
+        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
           {/* Header Modul */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/85 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
             <div>
               <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
                 <FileSpreadsheet size={14} />
@@ -117,7 +117,7 @@ export default function InputDataPage() {
           {/* Grid Konten: Form Manual & Unggah File */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Bagian 1: Formulir Input Manual */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/85 shadow-xs space-y-4">
               <div className="flex items-center space-x-2 border-b border-slate-100 pb-3">
                 <PlusCircle className="text-blue-600" size={18} />
                 <h3 className="text-sm font-bold text-slate-800">
@@ -127,14 +127,14 @@ export default function InputDataPage() {
 
               {successMessage && (
                 <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 rounded-xl text-xs font-semibold flex items-center space-x-2">
-                  <CheckCircle2 size={16} />
+                  <CheckCircle2 size={16} className="shrink-0" />
                   <span>{successMessage}</span>
                 </div>
               )}
 
               {errorMessage && (
                 <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs font-semibold flex items-center space-x-2">
-                  <AlertCircle size={16} />
+                  <AlertCircle size={16} className="shrink-0" />
                   <span>{errorMessage}</span>
                 </div>
               )}
@@ -176,7 +176,7 @@ export default function InputDataPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
                       KPMM (%)
@@ -207,7 +207,7 @@ export default function InputDataPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block font-bold text-slate-700 mb-1">
                       ROA (%)
@@ -251,7 +251,7 @@ export default function InputDataPage() {
             </div>
 
             {/* Bagian 2: Unggah Berkas Laporan */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 flex flex-col justify-between">
+            <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/85 shadow-xs space-y-4 flex flex-col justify-between">
               <div>
                 <div className="flex items-center space-x-2 border-b border-slate-100 pb-3 mb-4">
                   <UploadCloud className="text-blue-600" size={18} />
@@ -285,15 +285,15 @@ export default function InputDataPage() {
 
                 {fileName && (
                   <div className="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs flex items-center justify-between">
-                    <span className="font-semibold text-slate-700 truncate">
+                    <span className="font-semibold text-slate-700 truncate pr-2">
                       {fileName}
                     </span>
                     {isUploading ? (
-                      <span className="text-blue-600 font-bold animate-pulse">
+                      <span className="text-blue-600 font-bold animate-pulse shrink-0">
                         Memproses...
                       </span>
                     ) : uploadSuccess ? (
-                      <span className="text-emerald-600 font-bold flex items-center space-x-1">
+                      <span className="text-emerald-600 font-bold flex items-center space-x-1 shrink-0">
                         <CheckCircle2 size={14} />
                         <span>Berhasil Diunggah</span>
                       </span>
@@ -302,9 +302,9 @@ export default function InputDataPage() {
                 )}
               </div>
 
-              <div className="bg-blue-50/60 border border-blue-100 p-3.5 rounded-xl text-xs text-blue-800 space-y-1">
+              <div className="bg-blue-50/60 border border-blue-100 p-3.5 rounded-xl text-xs text-blue-800 space-y-1 mt-4 lg:mt-0">
                 <div className="font-bold flex items-center space-x-1.5">
-                  <AlertCircle size={14} />
+                  <AlertCircle size={14} className="shrink-0" />
                   <span>Catatan Pengawas:</span>
                 </div>
                 <p className="text-[11px] text-blue-700 leading-relaxed">

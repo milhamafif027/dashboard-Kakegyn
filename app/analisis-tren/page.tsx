@@ -119,12 +119,12 @@ export default function AnalisisTrenPage() {
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
       <Sidebar />
 
-      <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
         <Header />
 
-        <main className="p-6 space-y-6">
+        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
           {/* Header Judul & Filter Indikator */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
             <div>
               <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
                 <TrendingUp size={14} />
@@ -140,15 +140,15 @@ export default function AnalisisTrenPage() {
             </div>
 
             {/* Dropdown / Tombol Filter Indikator */}
-            <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200/80 p-1.5 rounded-xl">
-              <span className="text-xs font-semibold text-slate-500 flex items-center space-x-1 pl-2">
+            <div className="w-full xl:w-auto flex items-center space-x-2 bg-slate-50 border border-slate-200/80 p-1.5 rounded-xl">
+              <span className="text-xs font-semibold text-slate-500 flex items-center space-x-1 pl-2 shrink-0">
                 <Filter size={13} />
                 <span>Fokus:</span>
               </span>
               <select
                 value={selectedIndicator}
                 onChange={(e) => setSelectedIndicator(e.target.value)}
-                className="text-xs bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer"
+                className="w-full xl:w-auto text-xs bg-white border border-slate-200 rounded-lg px-3 py-1.5 font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-2xs cursor-pointer"
               >
                 <option value="all">Semua Indikator Utama</option>
                 <option value="kpmm">KPMM (%) - Permodalan</option>
@@ -160,8 +160,8 @@ export default function AnalisisTrenPage() {
           </div>
 
           {/* Grafik Tren Utama */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex justify-between items-center">
+          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
                   Grafik Pergerakan Tren Multi-Tahun
@@ -175,7 +175,7 @@ export default function AnalisisTrenPage() {
               </span>
             </div>
 
-            <div className="h-80 w-full pt-2">
+            <div className="h-72 md:h-80 w-full pt-2">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart
                   data={chartData}
@@ -259,9 +259,9 @@ export default function AnalisisTrenPage() {
           {/* Grid Bawah: Catatan Analisis & Rincian Per BPR */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Box Kesimpulan Analisis Tren */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center space-x-2">
-                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600">
+                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600 shrink-0">
                   <AlertTriangle size={16} />
                 </div>
                 <span>Peringatan Dini & Catatan Kritis Pengawas</span>
@@ -304,9 +304,9 @@ export default function AnalisisTrenPage() {
             </div>
 
             {/* Ringkasan Status Tren per BPR */}
-            <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
               <h3 className="text-sm font-bold text-slate-800 flex items-center space-x-2">
-                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600">
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 shrink-0">
                   <CheckCircle2 size={16} />
                 </div>
                 <span>Kategori Respon Pengawasan Berdasarkan Tren</span>
@@ -316,18 +316,18 @@ export default function AnalisisTrenPage() {
                 {bprList.map((bpr) => (
                   <div
                     key={bpr.id}
-                    className="flex items-center justify-between p-3 bg-slate-50/80 rounded-xl border border-slate-100 text-xs hover:bg-slate-50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-50/80 rounded-xl border border-slate-100 text-xs hover:bg-slate-50 transition-colors"
                   >
                     <div>
                       <span className="font-extrabold text-slate-800">
                         {bpr.name}
                       </span>
-                      <span className="text-slate-400 font-medium ml-2">
+                      <span className="text-slate-400 font-medium block sm:inline sm:ml-2">
                         • {bpr.mainIndication}
                       </span>
                     </div>
                     <span
-                      className={`px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider ${
+                      className={`self-start sm:self-auto px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider shrink-0 ${
                         bpr.dominantTrend === "Memburuk"
                           ? "bg-red-100 text-red-700"
                           : bpr.dominantTrend === "Membaik"

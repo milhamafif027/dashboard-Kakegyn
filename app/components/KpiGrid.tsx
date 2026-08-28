@@ -1,202 +1,300 @@
 "use client";
+import { useState, useEffect } from "react";
 import { ArrowDownRight, ArrowUpRight, ArrowRight } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
+import { supabase } from "../lib/supabase";
 
-// Data ringkasan 11 indikator portofolio BPR (BPR Angga, Bromo, Cendana, Desimal, Expres)
-const kpiData = [
-  {
-    title: "Total Aset",
-    value: "Rp 208 M",
-    status: "Meningkat",
-    type: "increase",
-    color: "#16a34a",
-    sparkline: [{ v: 170 }, { v: 178 }, { v: 189 }, { v: 198 }, { v: 208 }],
-  },
-  {
-    title: "Total Kredit",
-    value: "Rp 140 M",
-    status: "Meningkat",
-    type: "increase",
-    color: "#16a34a",
-    sparkline: [{ v: 110 }, { v: 116 }, { v: 125 }, { v: 133 }, { v: 140 }],
-  },
-  {
-    title: "DPK",
-    value: "Rp 154 M",
-    status: "Meningkat",
-    type: "increase",
-    color: "#16a34a",
-    sparkline: [{ v: 120 }, { v: 127 }, { v: 137 }, { v: 145 }, { v: 154 }],
-  },
-  {
-    title: "KPMM",
-    value: "25,75%",
-    status: "Stabil",
-    type: "stable",
-    color: "#2563eb",
-    sparkline: [
-      { v: 24.5 },
-      { v: 24.3 },
-      { v: 24.1 },
-      { v: 23.9 },
-      { v: 25.75 },
-    ],
-  },
-  {
-    title: "NPL Gross",
-    value: "4,20%",
-    status: "Menurun",
-    type: "decrease",
-    color: "#dc2626",
-    sparkline: [{ v: 4.5 }, { v: 4.7 }, { v: 4.8 }, { v: 4.9 }, { v: 4.2 }],
-  },
-  {
-    title: "Cadangan/PPKA",
-    value: "88,70%",
-    status: "Meningkat",
-    type: "increase",
-    color: "#16a34a",
-    sparkline: [
-      { v: 83.8 },
-      { v: 85.0 },
-      { v: 86.3 },
-      { v: 87.8 },
-      { v: 88.7 },
-    ],
-  },
-  {
-    title: "ROA",
-    value: "1,60%",
-    status: "Stabil",
-    type: "stable",
-    color: "#2563eb",
-    sparkline: [{ v: 1.7 }, { v: 1.6 }, { v: 1.5 }, { v: 1.4 }, { v: 1.6 }],
-  },
-  {
-    title: "BOPO",
-    value: "86,00%",
-    status: "Menurun",
-    type: "decrease",
-    color: "#dc2626", // Menurun pada BOPO artinya efisiensi membaik
-    sparkline: [
-      { v: 86.0 },
-      { v: 86.8 },
-      { v: 87.2 },
-      { v: 87.5 },
-      { v: 86.0 },
-    ],
-  },
-  {
-    title: "NIM",
-    value: "5,74%",
-    status: "Meningkat",
-    type: "increase",
-    color: "#16a34a",
-    sparkline: [{ v: 5.1 }, { v: 5.3 }, { v: 5.4 }, { v: 5.5 }, { v: 5.74 }],
-  },
-  {
-    title: "LDR",
-    value: "98,30%",
-    status: "Stabil",
-    type: "stable",
-    color: "#2563eb",
-    sparkline: [
-      { v: 96.0 },
-      { v: 97.2 },
-      { v: 97.8 },
-      { v: 98.0 },
-      { v: 98.3 },
-    ],
-  },
-  {
-    title: "Cash Ratio",
-    value: "102,58%",
-    status: "Meningkat",
-    type: "increase",
-    color: "#16a34a",
-    sparkline: [
-      { v: 83.5 },
-      { v: 89.2 },
-      { v: 93.0 },
-      { v: 98.1 },
-      { v: 102.58 },
-    ],
-  },
-];
+interface KpiItem {
+  title: string;
+  value: string;
+  status: string;
+  type: "increase" | "decrease" | "stable";
+  color: string;
+  sparkline: { v: number }[];
+}
 
 export default function KpiGrid() {
+  const [kpiData, setKpiData] = useState<KpiItem[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function fetchKpiMetrics() {
+      setLoading(true);
+      // Ambil seluruh data historis dari Supabase untuk perhitungan metrik & sparkline
+      const { data, error } = await supabase
+        .from("bpr_indicators")
+        .select("*")
+        .order("tahun", { ascending: true });
+
+      if (error) {
+        console.error("Gagal memuat metrik KPI dari Supabase:", error);
+      } else if (data && data.length > 0) {
+        // Ambil data tahun terbaru (2025) untuk nilai saat ini
+        const latestYearData = data.filter((row) => row.tahun === 2025);
+
+        // Hitung total atau rata-rata portofolio untuk tahun 2025
+        const totalAset = latestYearData.reduce(
+          (acc, curr) => acc + (Number(curr.total_aset) || 0),
+          0,
+        );
+        const totalKredit = latestYearData.reduce(
+          (acc, curr) => acc + (Number(curr.total_kredit) || 0),
+          0,
+        );
+        const totalDpk = latestYearData.reduce(
+          (acc, curr) => acc + (Number(curr.dpk) || 0),
+          0,
+        );
+
+        const avgKpmm =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.kpmm) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+        const avgNpl =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.npl) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+        const avgPpka =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.ppka) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+        const avgRoa =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.roa) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+        const avgBopo =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.bopo) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+        const avgNim =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.nim) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+        const avgLdr =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.ldr) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+        const avgCashRatio =
+          latestYearData.length > 0
+            ? latestYearData.reduce(
+                (acc, curr) => acc + (Number(curr.cash_ratio) || 0),
+                0,
+              ) / latestYearData.length
+            : 0;
+
+        // Buat helper untuk mengambil tren historis per tahun (sparkline)
+        const years = [2021, 2022, 2023, 2024, 2025];
+        const getYearlyAvg = (key: string, isTotal: boolean = false) => {
+          return years.map((yr) => {
+            const yrRows = data.filter((row) => row.tahun === yr);
+            if (yrRows.length === 0) return { v: 0 };
+            const sum = yrRows.reduce(
+              (acc, curr) => acc + (Number(curr[key]) || 0),
+              0,
+            );
+            const val = isTotal ? sum : sum / yrRows.length;
+            return { v: +val.toFixed(2) };
+          });
+        };
+
+        const liveKpiList: KpiItem[] = [
+          {
+            title: "Total Aset",
+            value: `Rp ${totalAset.toLocaleString("id-ID")} Jt`,
+            status: "Meningkat",
+            type: "increase",
+            color: "#16a34a",
+            sparkline: getYearlyAvg("total_aset", true),
+          },
+          {
+            title: "Total Kredit",
+            value: `Rp ${totalKredit.toLocaleString("id-ID")} Jt`,
+            status: "Meningkat",
+            type: "increase",
+            color: "#16a34a",
+            sparkline: getYearlyAvg("total_kredit", true),
+          },
+          {
+            title: "DPK",
+            value: `Rp ${totalDpk.toLocaleString("id-ID")} Jt`,
+            status: "Meningkat",
+            type: "increase",
+            color: "#16a34a",
+            sparkline: getYearlyAvg("dpk", true),
+          },
+          {
+            title: "KPMM",
+            value: `${avgKpmm.toFixed(2)}%`,
+            status: "Stabil",
+            type: "stable",
+            color: "#2563eb",
+            sparkline: getYearlyAvg("kpmm"),
+          },
+          {
+            title: "NPL Gross",
+            value: `${avgNpl.toFixed(2)}%`,
+            status: avgNpl > 5 ? "Meningkat" : "Menurun",
+            type: avgNpl > 5 ? "increase" : "decrease",
+            color: "#dc2626",
+            sparkline: getYearlyAvg("npl"),
+          },
+          {
+            title: "Cadangan/PPKA",
+            value: `${avgPpka.toFixed(2)}%`,
+            status: "Meningkat",
+            type: "increase",
+            color: "#16a34a",
+            sparkline: getYearlyAvg("ppka"),
+          },
+          {
+            title: "ROA",
+            value: `${avgRoa.toFixed(2)}%`,
+            status: "Stabil",
+            type: "stable",
+            color: "#2563eb",
+            sparkline: getYearlyAvg("roa"),
+          },
+          {
+            title: "BOPO",
+            value: `${avgBopo.toFixed(2)}%`,
+            status: avgBopo > 90 ? "Meningkat" : "Menurun",
+            type: avgBopo > 90 ? "increase" : "decrease",
+            color: "#dc2626",
+            sparkline: getYearlyAvg("bopo"),
+          },
+          {
+            title: "NIM",
+            value: `${avgNim.toFixed(2)}%`,
+            status: "Meningkat",
+            type: "increase",
+            color: "#16a34a",
+            sparkline: getYearlyAvg("nim"),
+          },
+          {
+            title: "LDR",
+            value: `${avgLdr.toFixed(2)}%`,
+            status: "Stabil",
+            type: "stable",
+            color: "#2563eb",
+            sparkline: getYearlyAvg("ldr"),
+          },
+          {
+            title: "Cash Ratio",
+            value: `${avgCashRatio.toFixed(2)}%`,
+            status: "Meningkat",
+            type: "increase",
+            color: "#16a34a",
+            sparkline: getYearlyAvg("cash_ratio"),
+          },
+        ];
+
+        setKpiData(liveKpiList);
+      }
+      setLoading(false);
+    }
+
+    fetchKpiMetrics();
+  }, []);
+
   return (
-    <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 select-none">
+    <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 select-none">
       <div>
         <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase">
-          11 Indikator Keuangan Portofolio BPR (Rata-Rata Portofolio)
+          11 Indikator Keuangan Portofolio BPR (Live Supabase)
         </h2>
         <p className="text-xs text-slate-500 mt-0.5">
-          Parameter kesehatan makro dan volume usaha BPR Angga, Bromo, Cendana,
-          Desimal, dan Expres.
+          Parameter kesehatan makro dan volume usaha hasil agregasi data
+          langsung dari basis data.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {kpiData.map((item, idx) => {
-          const isDecrease = item.type === "decrease";
-          const isStable = item.type === "stable";
+      {loading ? (
+        <div className="py-12 text-center text-xs text-slate-400 font-medium">
+          Menghitung parameter indikator dari basis data Supabase...
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          {kpiData.map((item, idx) => {
+            const isDecrease = item.type === "decrease";
+            const isStable = item.type === "stable";
 
-          let badgeStyle =
-            "bg-emerald-100 text-emerald-700 border border-emerald-200";
-          if (isDecrease) {
-            badgeStyle = "bg-red-100 text-red-700 border border-red-200";
-          } else if (isStable) {
-            badgeStyle = "bg-blue-100 text-blue-700 border border-blue-200";
-          }
+            let badgeStyle =
+              "bg-emerald-100 text-emerald-700 border border-emerald-200";
+            if (isDecrease) {
+              badgeStyle = "bg-red-100 text-red-700 border border-red-200";
+            } else if (isStable) {
+              badgeStyle = "bg-blue-100 text-blue-700 border border-blue-200";
+            }
 
-          const IconComponent = isDecrease
-            ? ArrowDownRight
-            : isStable
-              ? ArrowRight
-              : ArrowUpRight;
+            const IconComponent = isDecrease
+              ? ArrowDownRight
+              : isStable
+                ? ArrowRight
+                : ArrowUpRight;
 
-          return (
-            <div
-              key={idx}
-              className="bg-slate-50/70 border border-slate-200/80 p-3 rounded-xl flex flex-col justify-between hover:bg-white hover:shadow-md hover:border-blue-200 transition-all group"
-            >
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
-                  {item.title}
+            return (
+              <div
+                key={idx}
+                className="bg-slate-50/70 border border-slate-200/80 p-3.5 rounded-xl flex flex-col justify-between hover:bg-white hover:shadow-md hover:border-blue-200 transition-all group"
+              >
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate">
+                    {item.title}
+                  </div>
+                  <div className="text-sm lg:text-base font-black text-slate-800 mt-0.5 tracking-tight">
+                    {item.value}
+                  </div>
                 </div>
-                <div className="text-sm lg:text-base font-black text-slate-800 mt-0.5 tracking-tight">
-                  {item.value}
+
+                {/* Mini Sparkline Chart */}
+                <div className="h-9 w-full my-1.5">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={item.sparkline}>
+                      <Line
+                        type="monotone"
+                        dataKey="v"
+                        stroke={item.color}
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                  <span
+                    className={`inline-flex items-center space-x-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${badgeStyle}`}
+                  >
+                    <IconComponent size={10} className="stroke-[3]" />
+                    <span className="truncate">{item.status}</span>
+                  </span>
                 </div>
               </div>
-
-              {/* Mini Sparkline Chart */}
-              <div className="h-9 w-full my-1">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={item.sparkline}>
-                    <Line
-                      type="monotone"
-                      dataKey="v"
-                      stroke={item.color}
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-
-              <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-                <span
-                  className={`inline-flex items-center space-x-0.5 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md ${badgeStyle}`}
-                >
-                  <IconComponent size={10} className="stroke-[3]" />
-                  <span className="truncate">{item.status}</span>
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
