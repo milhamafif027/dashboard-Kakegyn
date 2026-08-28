@@ -2,24 +2,21 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import { supabase } from "../lib/supabase";
+import { BarChart2, Calendar, Building2 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
+  ResponsiveContainer,
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
-  ResponsiveContainer,
   CartesianGrid,
+  Legend,
 } from "recharts";
-import { SlidersHorizontal, Check } from "lucide-react";
 
-interface BprComparisonRecord {
+interface BprComparisonItem {
   bpr_name: string;
   tahun: number;
-  status: string;
-  dominant_trend: string;
   total_aset: number;
   total_kredit: number;
   dpk: number;
@@ -33,319 +30,336 @@ interface BprComparisonRecord {
   cash_ratio: number;
 }
 
-export default function PerbandinganBPRPage() {
-  const [allBprData, setAllBprData] = useState<BprComparisonRecord[]>([]);
-  const [availableBprs, setAvailableBprs] = useState<string[]>([]);
-  const [selectedBprs, setSelectedBprs] = useState<string[]>([]);
+export default function PerbandinganPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [rawData, setRawData] = useState<BprComparisonItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Ambil data tahun 2025 dari Supabase saat komponen dimuat
+  const [selectedYear, setSelectedYear] = useState<number>(2025);
+  const availableYears = [2021, 2022, 2023, 2024, 2025];
+
   useEffect(() => {
-    async function fetchComparisonData() {
+    async function fetchData() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("bpr_indicators")
-        .select("*")
-        .eq("tahun", 2025);
-
-      if (error) {
-        console.error("Gagal memuat data perbandingan:", error);
-      } else if (data) {
-        const records = data as BprComparisonRecord[];
-        setAllBprData(records);
-        const names = records.map((r) => r.bpr_name);
-        setAvailableBprs(names);
-        // Default pilih beberapa BPR pertama untuk perbandingan awal
-        setSelectedBprs(names.slice(0, 4));
+      try {
+        const res = await fetch(`/api/bpr?tahun=${selectedYear}`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setRawData(result.data);
+        }
+      } catch (err) {
+        console.error("Gagal memuat data perbandingan:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
-
-    fetchComparisonData();
-  }, []);
-
-  const handleCheckboxChange = (bprName: string) => {
-    if (selectedBprs.includes(bprName)) {
-      // Izinkan uncheck selama masih ada minimal 1 BPR yang dipilih
-      if (selectedBprs.length > 1) {
-        setSelectedBprs(selectedBprs.filter((item) => item !== bprName));
-      }
-    } else {
-      // Batas maksimal dihapus agar bisa memilih lebih dari 4 BPR secara bebas
-      setSelectedBprs([...selectedBprs, bprName]);
-    }
-  };
-
-  // Filter data berdasarkan BPR yang dipilih di checkbox
-  const filteredData = allBprData.filter((bpr) =>
-    selectedBprs.includes(bpr.bpr_name),
-  );
-
-  // Format data untuk grafik komparasi batang
-  const chartComparisonData = filteredData.map((bpr) => ({
-    name: bpr.bpr_name,
-    "KPMM (%)": bpr.kpmm,
-    "NPL Gross (%)": bpr.npl,
-    "ROA (%)": bpr.roa,
-  }));
+    fetchData();
+  }, [selectedYear]);
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
-      <Sidebar />
-
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        <Header />
-
-        <main className="p-4 md:p-6 space-y-6">
-          {/* Header Judul & Filter BPR Modern & Responsif */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5">
-            <div>
-              <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
-                <SlidersHorizontal size={14} />
-                <span>Analisis Komparatif Portofolio (Live Supabase)</span>
+        <Header onOpenSidebar={() => setSidebarOpen(true)} />
+        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
+          {/* Header & Filter Tahun */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                <BarChart2 size={20} />
               </div>
-              <h2 className="text-lg font-extrabold text-slate-800 tracking-tight">
-                Perbandingan Kinerja Keuangan BPR
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Pilih entitas BPR secara fleksibel untuk evaluasi head-to-head
-                indikator utama tahun 2025.
-              </p>
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-800">
+                  Komparasi Antar BPR
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Perbandingan 11 indikator keuangan seluruh entitas berdasarkan
+                  tahun.
+                </p>
+              </div>
             </div>
 
-            {/* Filter Pemilihan BPR Interaktif - Diperbaiki agar responsif & rapi */}
-            <div className="w-full xl:w-auto flex flex-col sm:flex-row items-start sm:items-center gap-2.5 bg-slate-50/80 p-3 rounded-xl border border-slate-200/60">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">
-                Filter BPR:
+            <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto">
+              <Calendar size={16} className="text-slate-400" />
+              <span className="text-[11px] font-bold text-slate-500">
+                Tahun:
               </span>
-              <div className="flex flex-wrap items-center gap-2 w-full">
-                {availableBprs.map((bprName) => {
-                  const isSelected = selectedBprs.includes(bprName);
-                  return (
-                    <button
-                      key={bprName}
-                      onClick={() => handleCheckboxChange(bprName)}
-                      className={`flex items-center space-x-1.5 text-xs px-3 py-2 rounded-xl font-bold transition-all border cursor-pointer ${
-                        isSelected
-                          ? "bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20"
-                          : "bg-white text-slate-600 border-slate-200/80 hover:bg-slate-100"
-                      }`}
-                    >
-                      <span>{bprName}</span>
-                      {isSelected && <Check size={13} className="stroke-[3]" />}
-                    </button>
-                  );
-                })}
-              </div>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+              >
+                {availableYears.map((yr) => (
+                  <option key={yr} value={yr}>
+                    {yr}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Tabel Komparasi Head-to-Head dengan Horizontal Scroll */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-800">
-                Matriks Komparasi 11 Indikator Utama (Tahun 2025)
-              </h3>
-              <span className="text-[11px] text-slate-400 font-medium">
-                {loading
-                  ? "Memuat..."
-                  : `Menampilkan ${filteredData.length} dari ${availableBprs.length} Entitas`}
-              </span>
+          {loading ? (
+            <div className="py-20 text-center text-xs text-slate-400 font-medium">
+              Memuat data komparasi...
             </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Tabel Matriks Komparasi */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider flex items-center space-x-2">
+                  <Building2 size={16} className="text-blue-600" />
+                  <span>Matriks Komparasi 11 Indikator ({selectedYear})</span>
+                </h3>
 
-            {/* Container Horizontal Scroll */}
-            <div className="overflow-x-auto rounded-xl border border-slate-100 pb-2">
-              <table className="w-full text-center text-xs border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="bg-slate-50/90 text-slate-500 border-b border-slate-200/80">
-                    <th className="py-3.5 px-4 text-left border-r border-slate-200/60 font-bold uppercase tracking-wider text-[11px] sticky left-0 bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                      Indikator Keuangan
-                    </th>
-                    {filteredData.map((bpr) => (
-                      <th
-                        key={bpr.bpr_name}
-                        className="py-3.5 px-4 border-r border-slate-200/60 font-extrabold text-slate-800 whitespace-nowrap min-w-[140px]"
-                      >
-                        <div className="text-sm">{bpr.bpr_name}</div>
-                        <div className="mt-1">
-                          <span
-                            className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wide inline-block ${
-                              bpr.status === "HIGH ATTENTION"
-                                ? "bg-red-100 text-red-700 border border-red-200"
-                                : bpr.status === "WATCH"
-                                  ? "bg-amber-100 text-amber-700 border border-amber-200"
-                                  : "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                            }`}
-                          >
-                            {bpr.status}
-                          </span>
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-                  {[
-                    {
-                      label: "Total Aset (Rp juta)",
-                      key: "total_aset",
-                      highlight: false,
-                    },
-                    {
-                      label: "Total Kredit (Rp juta)",
-                      key: "total_kredit",
-                      highlight: false,
-                    },
-                    { label: "DPK (Rp juta)", key: "dpk", highlight: false },
-                    { label: "KPMM (%)", key: "kpmm", highlight: false },
-                    {
-                      label: "NPL Gross (%)",
-                      key: "npl",
-                      highlight: true,
-                      threshold: 5,
-                    },
-                    {
-                      label: "Cadangan / PPKA (%)",
-                      key: "ppka",
-                      highlight: false,
-                    },
-                    { label: "ROA (%)", key: "roa", highlight: false },
-                    {
-                      label: "BOPO (%)",
-                      key: "bopo",
-                      highlight: true,
-                      threshold: 90,
-                    },
-                    { label: "NIM (%)", key: "nim", highlight: false },
-                    { label: "LDR (%)", key: "ldr", highlight: false },
-                    {
-                      label: "Cash Ratio (%)",
-                      key: "cash_ratio",
-                      highlight: false,
-                    },
-                  ].map((row, idx) => (
-                    <tr
-                      key={idx}
-                      className="hover:bg-slate-50/70 transition-colors"
-                    >
-                      <td className="py-3 px-4 text-left font-semibold text-slate-600 border-r border-slate-100 sticky left-0 bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] whitespace-nowrap">
-                        {row.label}
-                      </td>
-                      {filteredData.map((bpr) => {
-                        const val =
-                          (bpr as unknown as Record<string, number>)[row.key] ??
-                          0;
-                        const isAlert =
-                          row.highlight &&
-                          typeof val === "number" &&
-                          val > (row.threshold ?? 0);
-
-                        return (
-                          <td
-                            key={bpr.bpr_name}
-                            className={`py-3 px-4 border-r border-slate-100 font-bold whitespace-nowrap ${
-                              isAlert
-                                ? "text-red-600 bg-red-50/40"
-                                : "text-slate-800"
-                            }`}
-                          >
-                            {typeof val === "number"
-                              ? val.toLocaleString("id-ID")
-                              : val}
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-center text-xs border-collapse">
+                    <thead>
+                      <tr className="bg-slate-900 text-white">
+                        <th className="py-3 px-3 text-left">Nama BPR</th>
+                        <th className="py-3 px-2">Aset (Jt)</th>
+                        <th className="py-3 px-2">Kredit (Jt)</th>
+                        <th className="py-3 px-2">DPK (Jt)</th>
+                        <th className="py-3 px-2">KPMM (%)</th>
+                        <th className="py-3 px-2">NPL (%)</th>
+                        <th className="py-3 px-2">PPKA (%)</th>
+                        <th className="py-3 px-2">ROA (%)</th>
+                        <th className="py-3 px-2">BOPO (%)</th>
+                        <th className="py-3 px-2">NIM (%)</th>
+                        <th className="py-3 px-2">LDR (%)</th>
+                        <th className="py-3 px-2">Cash (%)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {rawData.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="py-3 px-3 text-left font-bold text-slate-900">
+                            {row.bpr_name}
                           </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                          <td className="py-3 px-2">
+                            {(row.total_aset || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="py-3 px-2">
+                            {(row.total_kredit || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="py-3 px-2">
+                            {(row.dpk || 0).toLocaleString("id-ID")}
+                          </td>
+                          <td className="py-3 px-2 font-bold text-blue-600">
+                            {row.kpmm?.toFixed(2)}
+                          </td>
+                          <td
+                            className={`py-3 px-2 font-bold ${row.npl > 5 ? "text-red-600" : ""}`}
+                          >
+                            {row.npl?.toFixed(2)}
+                          </td>
+                          <td className="py-3 px-2">{row.ppka?.toFixed(2)}</td>
+                          <td className="py-3 px-2">{row.roa?.toFixed(2)}</td>
+                          <td
+                            className={`py-3 px-2 font-bold ${row.bopo > 90 ? "text-red-600" : ""}`}
+                          >
+                            {row.bopo?.toFixed(2)}
+                          </td>
+                          <td className="py-3 px-2">{row.nim?.toFixed(2)}</td>
+                          <td className="py-3 px-2">{row.ldr?.toFixed(2)}</td>
+                          <td className="py-3 px-2">
+                            {row.cash_ratio?.toFixed(2)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-                  {/* Baris Tren Dominan */}
-                  <tr className="bg-slate-50/50">
-                    <td className="py-3.5 px-4 text-left font-bold text-slate-800 border-r border-slate-100 sticky left-0 bg-slate-50 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)] whitespace-nowrap">
-                      Trend Dominan
-                    </td>
-                    {filteredData.map((bpr) => (
-                      <td
-                        key={bpr.bpr_name}
-                        className="py-3.5 px-4 border-r border-slate-100 whitespace-nowrap"
-                      >
-                        <span
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider inline-block ${
-                            bpr.dominant_trend === "Memburuk"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-emerald-100 text-emerald-700"
-                          }`}
-                        >
-                          {bpr.dominant_trend}
-                        </span>
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+              {/* VISUALISASI GRAFIK KOMPARASI 11 INDIKATOR LENGKAP */}
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                <div>
+                  <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                    Visualisasi Grafik Komparasi 11 Indikator Antar BPR (
+                    {selectedYear})
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Grafik garis komparasi lengkap mencakup volume usaha,
+                    permodalan, rentabilitas, efisiensi, dan likuiditas.
+                  </p>
+                </div>
 
-          {/* Grafik Batang Komparasi Modern */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-800">
-                Visualisasi Komparasi Kinerja Utama (2025)
-              </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Perbandingan parameter KPMM, NPL Gross, dan ROA antar bank
-                terpilih.
-              </p>
-            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+                  {/* 1. Volume Usaha (Aset, Kredit, DPK) */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="text-xs font-bold text-slate-700">
+                      1. Komparasi Volume Usaha (Juta Rp)
+                    </div>
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={rawData}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#e2e8f0"
+                          />
+                          <XAxis dataKey="bpr_name" fontSize={10} />
+                          <YAxis fontSize={10} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          <Line
+                            type="monotone"
+                            dataKey="total_aset"
+                            name="Total Aset"
+                            stroke="#2563eb"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="total_kredit"
+                            name="Total Kredit"
+                            stroke="#16a34a"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="dpk"
+                            name="DPK"
+                            stroke="#9333ea"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
 
-            <div className="h-72 w-full pt-2">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={chartComparisonData}
-                  margin={{ top: 10, right: 30, left: -10, bottom: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#94a3b8"
-                    fontSize={11}
-                    tickLine={false}
-                  />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0f172a",
-                      border: "none",
-                      borderRadius: "12px",
-                      color: "#fff",
-                      fontSize: "12px",
-                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }}
-                  />
-                  <Bar
-                    dataKey="KPMM (%)"
-                    fill="#2563eb"
-                    radius={[6, 6, 0, 0]}
-                    maxBarSize={45}
-                  />
-                  <Bar
-                    dataKey="NPL Gross (%)"
-                    fill="#dc2626"
-                    radius={[6, 6, 0, 0]}
-                    maxBarSize={45}
-                  />
-                  <Bar
-                    dataKey="ROA (%)"
-                    fill="#16a34a"
-                    radius={[6, 6, 0, 0]}
-                    maxBarSize={45}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+                  {/* 2. Permodalan & Kualitas Aset (KPMM, NPL, PPKA) */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="text-xs font-bold text-slate-700">
+                      2. Komparasi Permodalan & Kualitas Aset (%)
+                    </div>
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={rawData}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#e2e8f0"
+                          />
+                          <XAxis dataKey="bpr_name" fontSize={10} />
+                          <YAxis fontSize={10} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          <Line
+                            type="monotone"
+                            dataKey="kpmm"
+                            name="KPMM"
+                            stroke="#2563eb"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="npl"
+                            name="NPL Gross"
+                            stroke="#dc2626"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="ppka"
+                            name="Cadangan/PPKA"
+                            stroke="#16a34a"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* 3. Rentabilitas & Efisiensi (ROA, BOPO, NIM) */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="text-xs font-bold text-slate-700">
+                      3. Komparasi Rentabilitas & Efisiensi (%)
+                    </div>
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={rawData}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#e2e8f0"
+                          />
+                          <XAxis dataKey="bpr_name" fontSize={10} />
+                          <YAxis fontSize={10} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          <Line
+                            type="monotone"
+                            dataKey="roa"
+                            name="ROA"
+                            stroke="#16a34a"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="bopo"
+                            name="BOPO"
+                            stroke="#dc2626"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="nim"
+                            name="NIM"
+                            stroke="#2563eb"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* 4. Likuiditas (LDR & Cash Ratio) */}
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+                    <div className="text-xs font-bold text-slate-700">
+                      4. Komparasi Likuiditas (%)
+                    </div>
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={rawData}>
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            stroke="#e2e8f0"
+                          />
+                          <XAxis dataKey="bpr_name" fontSize={10} />
+                          <YAxis fontSize={10} />
+                          <Tooltip />
+                          <Legend wrapperStyle={{ fontSize: "10px" }} />
+                          <Line
+                            type="monotone"
+                            dataKey="ldr"
+                            name="LDR"
+                            stroke="#2563eb"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="cash_ratio"
+                            name="Cash Ratio"
+                            stroke="#f59e0b"
+                            strokeWidth={2}
+                            dot={{ r: 4 }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </main>
       </div>
     </div>

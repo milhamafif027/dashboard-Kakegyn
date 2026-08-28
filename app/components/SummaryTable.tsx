@@ -1,332 +1,255 @@
 "use client";
 import { useState, useEffect } from "react";
-import {
-  ArrowDownRight,
-  ArrowUpRight,
-  ArrowRight,
-  Building2,
-} from "lucide-react";
-import { supabase } from "../lib/supabase";
+import { Building2 } from "lucide-react";
+
+interface SummaryTableProps {
+  startYear: number;
+  endYear: number;
+}
 
 interface BprRowData {
-  id: string | number;
-  name: string;
-  dominantTrend: string;
-  kpmm: { [year: number]: number };
-  npl: { [year: number]: number };
-  ppka: { [year: number]: number };
-  roa: { [year: number]: number };
-  bopo: { [year: number]: number };
-  nim: { [year: number]: number };
-  ldr: { [year: number]: number };
-  cashRatio: { [year: number]: number };
+  bpr_name: string;
+  tahun: number;
+  kpmm: number;
+  npl: number;
+  ppka: number;
+  roa: number;
+  bopo: number;
+  nim: number;
+  ldr: number;
+  cash_ratio: number;
+  total_aset: number;
+  total_kredit: number;
+  dpk: number;
 }
 
-export default function SummaryTable() {
-  const [bprData, setBprData] = useState<BprRowData[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function SummaryTable({
+  startYear,
+  endYear,
+}: SummaryTableProps) {
+  const [data, setData] = useState<BprRowData[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const years: number[] = [];
+  for (let y = startYear; y <= endYear; y++) {
+    years.push(y);
+  }
 
   useEffect(() => {
-    async function fetchTableData() {
-      const { data, error } = await supabase
-        .from("bpr_indicators")
-        .select("*")
-        .in("tahun", [2021, 2025]);
-
-      if (error) {
-        console.error("Gagal memuat data tabel:", error);
-      } else if (data) {
-        const grouped: Record<string, BprRowData> = {};
-
-        data.forEach((row: Record<string, unknown>) => {
-          const bprName = row.bpr_name as string;
-          if (!grouped[bprName]) {
-            grouped[bprName] = {
-              id: bprName,
-              name: bprName,
-              dominantTrend: (row.dominant_trend as string) || "Stabil",
-              kpmm: {},
-              npl: {},
-              ppka: {},
-              roa: {},
-              bopo: {},
-              nim: {},
-              ldr: {},
-              cashRatio: {},
-            };
-          }
-          const yr = row.tahun as number;
-          grouped[bprName].kpmm[yr] = row.kpmm as number;
-          grouped[bprName].npl[yr] = row.npl as number;
-          grouped[bprName].ppka[yr] = row.ppka as number;
-          grouped[bprName].roa[yr] = row.roa as number;
-          grouped[bprName].bopo[yr] = row.bopo as number;
-          grouped[bprName].nim[yr] = row.nim as number;
-          grouped[bprName].ldr[yr] = row.ldr as number;
-          grouped[bprName].cashRatio[yr] = row.cash_ratio as number;
-
-          if (yr === 2025) {
-            grouped[bprName].dominantTrend =
-              (row.dominant_trend as string) || "Stabil";
-          }
-        });
-
-        // Urutkan data berdasarkan nama BPR agar posisinya stabil
-        const sortedData = Object.values(grouped).sort((a, b) =>
-          a.name.localeCompare(b.name)
-        );
-
-        setBprData(sortedData);
+    async function fetchData() {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/bpr`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          setData(result.data);
+        }
+      } catch (err) {
+        console.error("Gagal memuat ringkasan data:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
-
-    fetchTableData();
+    fetchData();
   }, []);
 
+  const groupedData: Record<string, Record<number, BprRowData>> = {};
+  data.forEach((item) => {
+    if (!groupedData[item.bpr_name]) {
+      groupedData[item.bpr_name] = {};
+    }
+    groupedData[item.bpr_name][item.tahun] = item;
+  });
+
+  const bprNames = Object.keys(groupedData);
+
   return (
-    <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/85 shadow-xs space-y-4 select-none">
-      {/* Header Judul Komponen */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+    <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 select-none w-full">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-sm font-extrabold text-slate-800 tracking-tight flex items-center space-x-2">
+          <h3 className="text-sm font-extrabold text-slate-800 tracking-tight flex items-center space-x-2">
             <Building2 size={16} className="text-blue-600 shrink-0" />
-            <span>RINGKASAN INDIKATOR KEUANGAN PER BPR (2021 - 2025)</span>
-          </h2>
+            <span>
+              RINGKASAN INDIKATOR KEUANGAN PER BPR ({startYear} - {endYear})
+            </span>
+          </h3>
           <p className="text-xs text-slate-400 mt-0.5">
             Matriks komparatif multi-tahun portofolio lembaga perkreditan rakyat
-            (Live Supabase).
+            berdasarkan rentang waktu terpilih.
           </p>
         </div>
-        <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl uppercase tracking-wider shrink-0">
-          {loading ? "Memuat Data..." : "Database Connected"}
-        </span>
+        <div className="text-[11px] font-bold bg-slate-100 text-slate-600 px-3 py-1 rounded-xl self-start sm:self-auto">
+          PERIODE: {years.length} TAHUN
+        </div>
       </div>
 
-      {/* Kontainer Tabel dengan Horizontal Scroll yang Aman */}
-      <div className="overflow-x-auto rounded-xl border border-slate-200/80 shadow-2xs pb-2">
-        <table className="w-full text-center text-xs border-collapse min-w-[950px]">
-          <thead>
-            {/* Header Utama Kolom */}
-            <tr className="bg-slate-900 text-white border-b border-slate-800">
-              <th
-                rowSpan={2}
-                className="py-3 px-2 border-r border-slate-800 font-bold w-12 sticky left-0 bg-slate-900 z-30"
-              >
-                No
-              </th>
-              <th
-                rowSpan={2}
-                className="py-3 px-3 border-r border-slate-800 font-bold text-left w-36 min-w-[140px] sticky left-12 bg-slate-900 z-30 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.6)]"
-              >
-                BPR
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                KPMM (%)
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                NPL Gross (%)
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                Cadangan/PPKA (%)
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                ROA (%)
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                BOPO (%)
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                NIM (%)
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                LDR (%)
-              </th>
-              <th
-                colSpan={2}
-                className="py-2 px-2 border-r border-slate-800 font-bold bg-blue-950/60"
-              >
-                Cash Ratio (%)
-              </th>
-              <th rowSpan={2} className="py-3 px-4 font-bold bg-slate-900 min-w-[130px]">
-                Trend Dominan
-              </th>
-            </tr>
-            {/* Sub-Header Tahun (2021 & 2025) */}
-            <tr className="bg-slate-800 text-slate-300 border-b border-slate-700 text-[11px]">
-              {Array(8)
-                .fill(null)
-                .map((_, i) => (
-                  <FragmentColumns key={i} />
+      {loading ? (
+        <div className="py-12 text-center text-xs text-slate-400 font-medium">
+          Memuat matriks data ringkasan...
+        </div>
+      ) : (
+        <div className="w-full overflow-x-auto rounded-xl border border-slate-200">
+          <table className="w-full border-collapse text-xs whitespace-nowrap text-left border-spacing-0">
+            <thead>
+              <tr className="bg-slate-900 text-white text-center">
+                <th className="py-3 px-3 bg-slate-900 border-r border-slate-800 w-12">
+                  No
+                </th>
+                <th className="py-3 px-4 bg-slate-900 border-r border-slate-800 text-left min-w-[160px]">
+                  BPR
+                </th>
+                <th
+                  colSpan={years.length}
+                  className="py-3 px-2 border-r border-slate-800"
+                >
+                  KPMM (%)
+                </th>
+                <th
+                  colSpan={years.length}
+                  className="py-3 px-2 border-r border-slate-800"
+                >
+                  NPL Gross (%)
+                </th>
+                <th
+                  colSpan={years.length}
+                  className="py-3 px-2 border-r border-slate-800"
+                >
+                  Cadangan/PPKA (%)
+                </th>
+                <th
+                  colSpan={years.length}
+                  className="py-3 px-2 border-r border-slate-800"
+                >
+                  ROA (%)
+                </th>
+                <th colSpan={years.length} className="py-3 px-2">
+                  BOPO (%)
+                </th>
+              </tr>
+
+              <tr className="bg-slate-800 text-slate-200 text-center text-[11px]">
+                <th className="bg-slate-800 border-r border-slate-700"></th>
+                <th className="bg-slate-800 border-r border-slate-700"></th>
+
+                {years.map((yr) => (
+                  <th
+                    key={`kpmm-${yr}`}
+                    className="py-2 px-2.5 font-semibold border-r border-slate-700"
+                  >
+                    {yr}
+                  </th>
                 ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
-            {loading ? (
-              <tr>
-                <td colSpan={19} className="py-8 text-center text-slate-400">
-                  Menyinkronkan data dari basis data Supabase...
-                </td>
+                {years.map((yr) => (
+                  <th
+                    key={`npl-${yr}`}
+                    className="py-2 px-2.5 font-semibold border-r border-slate-700"
+                  >
+                    {yr}
+                  </th>
+                ))}
+                {years.map((yr) => (
+                  <th
+                    key={`ppka-${yr}`}
+                    className="py-2 px-2.5 font-semibold border-r border-slate-700"
+                  >
+                    {yr}
+                  </th>
+                ))}
+                {years.map((yr) => (
+                  <th
+                    key={`roa-${yr}`}
+                    className="py-2 px-2.5 font-semibold border-r border-slate-700"
+                  >
+                    {yr}
+                  </th>
+                ))}
+                {years.map((yr) => (
+                  <th key={`bopo-${yr}`} className="py-2 px-2.5 font-semibold">
+                    {yr}
+                  </th>
+                ))}
               </tr>
-            ) : bprData.length === 0 ? (
-              <tr>
-                <td colSpan={19} className="py-8 text-center text-slate-400">
-                  Tidak ada data ditemukan di tabel Supabase.
-                </td>
-              </tr>
-            ) : (
-              bprData.map((item, index) => {
-                const isMembaik = item.dominantTrend === "Membaik";
-                const isMemburuk = item.dominantTrend === "Memburuk";
+            </thead>
+
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {bprNames.map((name, index) => {
+                const bprYearsData = groupedData[name];
 
                 return (
-                  <tr
-                    key={item.id}
-                    className="transition-colors hover:bg-blue-50/40 bg-white"
-                  >
-                    <td className="py-3 px-2 border-r border-slate-200/80 font-bold text-slate-400 w-12 sticky left-0 bg-white z-20">
+                  <tr key={name} className="hover:bg-slate-50 text-center">
+                    <td className="py-3 px-3 bg-white border-r border-slate-200 font-bold text-slate-500">
                       {index + 1}
                     </td>
-                    <td className="py-3 px-3 border-r border-slate-200/80 font-extrabold text-slate-800 text-left w-36 min-w-[140px] sticky left-12 bg-white z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.08)] whitespace-nowrap">
-                      {item.name}
+                    <td className="py-3 px-4 bg-white border-r border-slate-200 text-left font-extrabold text-slate-900">
+                      {name}
                     </td>
 
-                    {/* KPMM */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.kpmm[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${isMembaik ? "text-emerald-600 bg-emerald-50/30" : "text-slate-800"}`}
-                    >
-                      {item.kpmm[2025]?.toFixed(2) ?? "-"}
-                    </td>
+                    {years.map((yr) => {
+                      const val = bprYearsData[yr]?.kpmm;
+                      return (
+                        <td
+                          key={`kpmm-val-${yr}`}
+                          className="py-3 px-2.5 border-r border-slate-100"
+                        >
+                          {val !== undefined ? val.toFixed(2) : "-"}
+                        </td>
+                      );
+                    })}
 
-                    {/* NPL Gross */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.npl[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${(item.npl[2025] ?? 0) > 5 ? "text-red-600 bg-red-50/60" : "text-slate-800"}`}
-                    >
-                      {item.npl[2025]?.toFixed(2) ?? "-"}
-                    </td>
+                    {years.map((yr) => {
+                      const val = bprYearsData[yr]?.npl;
+                      return (
+                        <td
+                          key={`npl-val-${yr}`}
+                          className={`py-3 px-2.5 border-r border-slate-100 font-bold ${val > 5 ? "text-red-600 bg-red-50/50" : ""}`}
+                        >
+                          {val !== undefined ? val.toFixed(2) : "-"}
+                        </td>
+                      );
+                    })}
 
-                    {/* Cadangan/PPKA */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.ppka[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
-                      {item.ppka[2025]?.toFixed(2) ?? "-"}
-                    </td>
+                    {years.map((yr) => {
+                      const val = bprYearsData[yr]?.ppka;
+                      return (
+                        <td
+                          key={`ppka-val-${yr}`}
+                          className="py-3 px-2.5 border-r border-slate-100"
+                        >
+                          {val !== undefined ? val.toFixed(2) : "-"}
+                        </td>
+                      );
+                    })}
 
-                    {/* ROA */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.roa[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${isMembaik ? "text-emerald-600 bg-emerald-50/30" : "text-slate-800"}`}
-                    >
-                      {item.roa[2025]?.toFixed(2) ?? "-"}
-                    </td>
+                    {years.map((yr) => {
+                      const val = bprYearsData[yr]?.roa;
+                      return (
+                        <td
+                          key={`roa-val-${yr}`}
+                          className="py-3 px-2.5 border-r border-slate-100"
+                        >
+                          {val !== undefined ? val.toFixed(2) : "-"}
+                        </td>
+                      );
+                    })}
 
-                    {/* BOPO */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.bopo[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td
-                      className={`py-3 px-1.5 border-r border-slate-200/80 font-bold whitespace-nowrap ${(item.bopo[2025] ?? 0) > 90 ? "text-red-600 bg-red-50/60" : "text-slate-800"}`}
-                    >
-                      {item.bopo[2025]?.toFixed(2) ?? "-"}
-                    </td>
-
-                    {/* NIM */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.nim[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
-                      {item.nim[2025]?.toFixed(2) ?? "-"}
-                    </td>
-
-                    {/* LDR */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.ldr[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
-                      {item.ldr[2025]?.toFixed(2) ?? "-"}
-                    </td>
-
-                    {/* Cash Ratio */}
-                    <td className="py-3 px-1.5 border-r border-slate-100 text-slate-400 whitespace-nowrap">
-                      {item.cashRatio[2021]?.toFixed(2) ?? "-"}
-                    </td>
-                    <td className="py-3 px-1.5 border-r border-slate-200/80 font-bold text-slate-800 whitespace-nowrap">
-                      {item.cashRatio[2025]?.toFixed(2) ?? "-"}
-                    </td>
-
-                    {/* Trend Dominan */}
-                    <td className="py-3 px-3 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center space-x-1 px-2.5 py-1 rounded-lg text-[10px] font-extrabold uppercase tracking-wider ${
-                          isMemburuk
-                            ? "bg-red-100 text-red-700 border border-red-200"
-                            : isMembaik
-                              ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                              : "bg-blue-100 text-blue-700 border border-blue-200"
-                        }`}
-                      >
-                        {isMemburuk && (
-                          <ArrowDownRight size={12} className="stroke-[3]" />
-                        )}
-                        {isMembaik && (
-                          <ArrowUpRight size={12} className="stroke-[3]" />
-                        )}
-                        {!isMemburuk && !isMembaik && (
-                          <ArrowRight size={12} className="stroke-[3]" />
-                        )}
-                        <span>{item.dominantTrend}</span>
-                      </span>
-                    </td>
+                    {years.map((yr) => {
+                      const val = bprYearsData[yr]?.bopo;
+                      return (
+                        <td
+                          key={`bopo-val-${yr}`}
+                          className={`py-3 px-2.5 ${val > 90 ? "text-red-600 bg-red-50/50" : ""}`}
+                        >
+                          {val !== undefined ? val.toFixed(2) : "-"}
+                        </td>
+                      );
+                    })}
                   </tr>
                 );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
-  );
-}
-
-function FragmentColumns() {
-  return (
-    <>
-      <th className="py-1.5 px-1.5 border-r border-slate-700 font-semibold text-slate-400 text-[10px]">
-        2021
-      </th>
-      <th className="py-1.5 px-1.5 border-r border-slate-700 font-bold text-slate-200 text-[10px]">
-        2025
-      </th>
-    </>
   );
 }

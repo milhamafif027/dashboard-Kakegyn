@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import { supabase } from "../lib/supabase";
 import {
   Database,
   Building2,
@@ -36,45 +35,69 @@ export default function DetailBPRPage() {
   const [bprRecords, setBprRecords] = useState<BprDetailRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Ambil daftar nama BPR unik dari Supabase
+  // 1. Ambil daftar nama BPR unik dari API lokal MySQL
   useEffect(() => {
     async function fetchBprNames() {
-      const { data, error } = await supabase
-        .from("bpr_indicators")
-        .select("bpr_name");
+      try {
+        const res = await fetch("/api/bpr");
+        const result = await res.json();
+        const data = result.data;
 
-      if (error) {
-        console.error("Gagal memuat nama BPR:", error);
-      } else if (data) {
-        const uniqueNames = Array.from(
-          new Set(data.map((item) => item.bpr_name)),
-        );
-        setBprList(uniqueNames);
-        if (uniqueNames.length > 0 && !uniqueNames.includes(selectedBpr)) {
-          setSelectedBpr(uniqueNames[0]);
+        if (result.error) {
+          console.error(
+            "Gagal memuat nama BPR dari database lokal:",
+            result.error,
+          );
+        } else if (data) {
+          const uniqueNames = Array.from(
+            new Set(
+              data.map(
+                (item: Record<string, unknown>) => item.bpr_name as string,
+              ),
+            ),
+          ) as string[];
+          setBprList(uniqueNames);
+          if (uniqueNames.length > 0 && !uniqueNames.includes(selectedBpr)) {
+            setSelectedBpr(uniqueNames[0]);
+          }
         }
+      } catch (err) {
+        console.error(
+          "Kesalahan jaringan saat mengambil daftar nama BPR:",
+          err,
+        );
       }
     }
     fetchBprNames();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 2. Ambil data historis (2021-2025) untuk BPR yang sedang dipilih
+  // 2. Ambil data historis (2021-2025) untuk BPR yang sedang dipilih dari API lokal MySQL
   useEffect(() => {
     async function fetchBprDetails() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("bpr_indicators")
-        .select("*")
-        .eq("bpr_name", selectedBpr)
-        .order("tahun", { ascending: true });
+      try {
+        const res = await fetch(
+          `/api/bpr?bpr_name=${encodeURIComponent(selectedBpr)}`,
+        );
+        const result = await res.json();
+        const data = result.data;
 
-      if (error) {
-        console.error("Gagal memuat detail BPR:", error);
-      } else if (data) {
-        setBprRecords(data as BprDetailRecord[]);
+        if (result.error) {
+          console.error("Gagal memuat detail BPR:", result.error);
+        } else if (data) {
+          // Urutkan berdasarkan tahun secara ascending
+          const sorted = data.sort(
+            (a: Record<string, unknown>, b: Record<string, unknown>) =>
+              Number(a.tahun) - Number(b.tahun),
+          );
+          setBprRecords(sorted as BprDetailRecord[]);
+        }
+      } catch (err) {
+        console.error("Kesalahan jaringan saat mengambil detail BPR:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     if (selectedBpr) {
@@ -123,7 +146,7 @@ export default function DetailBPRPage() {
             <div>
               <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
                 <Database size={14} />
-                <span>Modul Informasi Lembaga (Live Supabase)</span>
+                <span>Modul Informasi Lembaga (Local Database)</span>
               </div>
               <h2 className="text-lg font-extrabold text-slate-800 tracking-tight">
                 Detail Profil & Kinerja Keuangan BPR
@@ -252,7 +275,7 @@ export default function DetailBPRPage() {
                 </p>
               </div>
               <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl shrink-0">
-                {loading ? "Memuat Data..." : "Database Terverifikasi"}
+                {loading ? "Memuat Data..." : "Database Lokal Terverifikasi"}
               </span>
             </div>
 

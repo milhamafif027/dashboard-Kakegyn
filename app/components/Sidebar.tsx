@@ -4,12 +4,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   BarChart2,
-  TrendingUp,
   FileText,
   Database,
   ShieldCheck,
   ChevronRight,
-  BookOpen,
   FileSpreadsheet,
   X,
 } from "lucide-react";
@@ -22,6 +20,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
+  // Menu navigasi setelah Analisis Tren dan Dokumen terpisah dihapus/digabungkan
   const menuItems = [
     { name: "Dashboard Utama", href: "/", icon: LayoutDashboard },
     {
@@ -30,10 +29,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: FileSpreadsheet,
     },
     { name: "Perbandingan BPR", href: "/perbandingan", icon: BarChart2 },
-    { name: "Analisis Tren", href: "/analisis-tren", icon: TrendingUp },
     { name: "Detail BPR", href: "/detail-bpr", icon: Database },
     { name: "Laporan Pengawasan", href: "/laporan", icon: FileText },
-    { name: "Tab Dokumen Pedoman", href: "/dokumen", icon: BookOpen },
   ];
 
   return (
@@ -99,7 +96,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={onClose} // <-- Memastikan sidebar otomatis tertutup saat menu diklik
+                  onClick={onClose}
                   className={`group flex items-center justify-between px-3.5 py-3 rounded-xl text-xs font-semibold transition-all duration-200 cursor-pointer ${
                     isActive
                       ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold"

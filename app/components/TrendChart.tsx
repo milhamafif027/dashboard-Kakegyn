@@ -10,7 +10,6 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts";
-import { supabase } from "../lib/supabase";
 
 interface TrendChartRecord {
   year: number;
@@ -27,55 +26,59 @@ export default function TrendChart() {
   useEffect(() => {
     async function fetchTrendChartData() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("bpr_indicators")
-        .select("tahun, kpmm, npl, roa, bopo")
-        .order("tahun", { ascending: true });
+      try {
+        const res = await fetch("/api/bpr");
+        const result = await res.json();
+        const data = result.data;
 
-      if (error) {
-        console.error("Gagal memuat data grafik tren:", error);
-      } else if (data) {
-        // Kelompokkan dan hitung rata-rata per tahun
-        const yearMap: Record<
-          number,
-          {
-            count: number;
-            kpmm: number;
-            npl: number;
-            roa: number;
-            bopo: number;
-          }
-        > = {};
+        if (result.error) {
+          console.error("Gagal memuat data grafik tren:", result.error);
+        } else if (data) {
+          // Kelompokkan dan hitung rata-rata per tahun
+          const yearMap: Record<
+            number,
+            {
+              count: number;
+              kpmm: number;
+              npl: number;
+              roa: number;
+              bopo: number;
+            }
+          > = {};
 
-        data.forEach((row) => {
-          const yr = row.tahun;
-          if (!yearMap[yr]) {
-            yearMap[yr] = { count: 0, kpmm: 0, npl: 0, roa: 0, bopo: 0 };
-          }
-          yearMap[yr].count += 1;
-          yearMap[yr].kpmm += Number(row.kpmm) || 0;
-          yearMap[yr].npl += Number(row.npl) || 0;
-          yearMap[yr].roa += Number(row.roa) || 0;
-          yearMap[yr].bopo += Number(row.bopo) || 0;
-        });
+          data.forEach((row: Record<string, unknown>) => {
+            const yr = Number(row.tahun);
+            if (!yearMap[yr]) {
+              yearMap[yr] = { count: 0, kpmm: 0, npl: 0, roa: 0, bopo: 0 };
+            }
+            yearMap[yr].count += 1;
+            yearMap[yr].kpmm += Number(row.kpmm) || 0;
+            yearMap[yr].npl += Number(row.npl) || 0;
+            yearMap[yr].roa += Number(row.roa) || 0;
+            yearMap[yr].bopo += Number(row.bopo) || 0;
+          });
 
-        const formatted: TrendChartRecord[] = Object.keys(yearMap).map(
-          (yrStr) => {
-            const yr = Number(yrStr);
-            const item = yearMap[yr];
-            return {
-              year: yr,
-              kpmm: +(item.kpmm / item.count).toFixed(2),
-              npl: +(item.npl / item.count).toFixed(2),
-              roa: +(item.roa / item.count).toFixed(2),
-              bopo: +(item.bopo / item.count).toFixed(2),
-            };
-          },
-        );
+          const formatted: TrendChartRecord[] = Object.keys(yearMap)
+            .map((yrStr) => {
+              const yr = Number(yrStr);
+              const item = yearMap[yr];
+              return {
+                year: yr,
+                kpmm: +(item.kpmm / item.count).toFixed(2),
+                npl: +(item.npl / item.count).toFixed(2),
+                roa: +(item.roa / item.count).toFixed(2),
+                bopo: +(item.bopo / item.count).toFixed(2),
+              };
+            })
+            .sort((a, b) => a.year - b.year);
 
-        setChartData(formatted);
+          setChartData(formatted);
+        }
+      } catch (err) {
+        console.error("Kesalahan jaringan saat mengambil data grafik:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchTrendChartData();
@@ -86,7 +89,7 @@ export default function TrendChart() {
       <div>
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
           <h2 className="text-sm font-extrabold text-slate-800 tracking-tight">
-            TREND INDIKATOR KEUANGAN (LIVE SUPABASE)
+            TREND INDIKATOR KEUANGAN (LOCAL DATABASE)
           </h2>
           <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200 px-3 py-1 rounded-xl font-medium">
             Status:{" "}
@@ -159,8 +162,8 @@ export default function TrendChart() {
       </div>
 
       <div className="text-[11px] text-slate-400 text-center italic font-medium">
-        * Grafik diperbarui secara otomatis berdasarkan data historis basis data
-        Supabase
+        * Grafik diperbarui secara otomatis berdasarkan data historis database
+        lokal MySQL
       </div>
     </div>
   );

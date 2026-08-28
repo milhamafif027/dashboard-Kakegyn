@@ -56,7 +56,7 @@ export default function DynamicTrendChart() {
   }, [isLive]);
 
   return (
-    <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/85 shadow-xs space-y-4">
+    <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/85 shadow-xs space-y-4 select-none">
       {/* Header & Tombol Kontrol Animasi */}
       <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
         <div>

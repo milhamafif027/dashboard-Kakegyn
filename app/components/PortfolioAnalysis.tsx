@@ -1,5 +1,12 @@
 "use client";
-import { ArrowDownRight, CreditCard, TrendingDown, ShieldAlert, PieChart, Activity } from "lucide-react";
+import {
+  ArrowDownRight,
+  CreditCard,
+  TrendingDown,
+  ShieldAlert,
+  PieChart,
+  Activity,
+} from "lucide-react";
 
 export default function PortfolioAnalysis() {
   return (
@@ -49,7 +56,9 @@ export default function PortfolioAnalysis() {
               <Activity size={14} className="text-red-500 shrink-0" />
               <span>Efisiensi</span>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium">BOPO meningkat</span>
+            <span className="text-[11px] text-slate-500 font-medium">
+              BOPO meningkat
+            </span>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
@@ -57,7 +66,9 @@ export default function PortfolioAnalysis() {
               <ShieldAlert size={14} className="text-amber-500 shrink-0" />
               <span>Permodalan</span>
             </div>
-            <span className="text-[11px] text-slate-500 font-medium">KPMM menurun</span>
+            <span className="text-[11px] text-slate-500 font-medium">
+              KPMM menurun
+            </span>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 text-xs bg-slate-50/80 p-2.5 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">

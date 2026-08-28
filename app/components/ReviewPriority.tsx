@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import { supabase } from "../lib/supabase";
 
 interface ReviewItem {
   id: string;
@@ -16,55 +15,60 @@ export default function ReviewPriority() {
 
   useEffect(() => {
     async function fetchReviewData() {
-      // Ambil data periode terbaru (2025) dari Supabase
-      const { data, error } = await supabase
-        .from("bpr_indicators")
-        .select("*")
-        .eq("tahun", 2025);
+      try {
+        // Ambil data periode terbaru (2025) dari API lokal MySQL
+        const res = await fetch("/api/bpr?tahun=2025");
+        const result = await res.json();
+        const data = result.data;
 
-      if (error) {
-        console.error("Gagal memuat data prioritas review:", error);
-      } else if (data) {
-        // Petakan data dari database ke format tampilan (parameter index dihapus)
-        const mapped: ReviewItem[] = data.map(
-          (row: Record<string, unknown>) => {
-            const name = row.bpr_name as string;
-            const status =
-              (row.status as "HIGH ATTENTION" | "WATCH" | "STABLE") || "STABLE";
+        if (result.error) {
+          console.error("Gagal memuat data prioritas review:", result.error);
+        } else if (data) {
+          // Petakan data dari database ke format tampilan
+          const mapped: ReviewItem[] = data.map(
+            (row: Record<string, unknown>) => {
+              const name = row.bpr_name as string;
+              const status =
+                (row.status as "HIGH ATTENTION" | "WATCH" | "STABLE") ||
+                "STABLE";
 
-            // Tentukan indikasi utama berdasarkan tren/status
-            let indication = "Kinerja keuangan stabil dan sehat";
-            if (name === "BPR Angga")
-              indication = "NPL meningkat, ROA turun, BOPO naik";
-            else if (name === "BPR Desimal")
-              indication = "Pertumbuhan kredit perlu diimbangi pencadangan";
-            else if (name === "BPR Cendana")
-              indication = "Fluktuasi pada rasio efisiensi operasional";
-            else if (name === "BPR Bromo")
-              indication = "Likuiditas stabil dan permodalan kuat";
-            else if (name === "BPR Expres")
-              indication = "Kinerja keuangan ekspansif dan sehat";
+              // Tentukan indikasi utama berdasarkan tren/status
+              let indication = "Kinerja keuangan stabil dan sehat";
+              if (name === "BPR Angga")
+                indication = "NPL meningkat, ROA turun, BOPO naik";
+              else if (name === "BPR Desimal")
+                indication = "Pertumbuhan kredit perlu diimbangi pencadangan";
+              else if (name === "BPR Cendana")
+                indication = "Fluktuasi pada rasio efisiensi operasional";
+              else if (name === "BPR Bromo")
+                indication = "Likuiditas stabil dan permodalan kuat";
+              else if (name === "BPR Expres")
+                indication = "Kinerja keuangan ekspansif dan sehat";
 
-            // Berikan peringkat prioritas
-            let rank = 3;
-            if (status === "HIGH ATTENTION") rank = 1;
-            else if (status === "WATCH") rank = 2;
+              // Berikan peringkat prioritas
+              let rank = 3;
+              if (status === "HIGH ATTENTION") rank = 1;
+              else if (status === "WATCH") rank = 2;
 
-            return {
-              id: name,
-              rank,
-              name,
-              status,
-              mainIndication: indication,
-            };
-          },
-        );
+              return {
+                id: name,
+                rank,
+                name,
+                status,
+                mainIndication: indication,
+              };
+            },
+          );
 
-        // Urutkan berdasarkan peringkat (1 ke atas)
-        mapped.sort((a, b) => a.rank - b.rank);
-        setBprList(mapped);
+          // Urutkan berdasarkan peringkat (1 ke atas)
+          mapped.sort((a, b) => a.rank - b.rank);
+          setBprList(mapped);
+        }
+      } catch (err) {
+        console.error("Kesalahan jaringan saat mengambil data prioritas:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
 
     fetchReviewData();
@@ -78,7 +82,7 @@ export default function ReviewPriority() {
             PRIORITAS REVIEW BPR
           </h2>
           <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2.5 py-1 rounded-xl uppercase">
-            {loading ? "Memuat..." : "Live Supabase"}
+            {loading ? "Memuat..." : "Local Database"}
           </span>
         </div>
 
@@ -104,7 +108,7 @@ export default function ReviewPriority() {
               {loading ? (
                 <tr>
                   <td colSpan={4} className="py-8 text-center text-slate-400">
-                    Menyinkronkan data prioritas dari server...
+                    Menyinkronkan data prioritas dari server lokal...
                   </td>
                 </tr>
               ) : (

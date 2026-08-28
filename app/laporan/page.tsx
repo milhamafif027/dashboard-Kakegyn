@@ -2,324 +2,511 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import { supabase } from "../lib/supabase";
 import {
   FileText,
   Download,
-  Printer,
-  CheckCircle,
-  Calendar,
-  Building,
+  Building2,
+  ArrowUpRight,
+  ArrowDownRight,
+  ArrowRight,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
-interface LaporanItem {
+interface BprItem {
   bpr_name: string;
-  status: string;
-  dominant_trend: string;
+  tahun: number;
+  total_aset: number;
+  total_kredit: number;
+  dpk: number;
   kpmm: number;
   npl: number;
+  ppka: number;
+  roa: number;
+  bopo: number;
+  nim: number;
+  ldr: number;
+  cash_ratio: number;
+  dominant_trend: string;
 }
 
 export default function LaporanPage() {
-  const [selectedPeriod] = useState<string>("2021-2025");
-  const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [reportData, setReportData] = useState<LaporanItem[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [bprNames, setBprNames] = useState<string[]>([]);
+  const [selectedBpr, setSelectedBpr] = useState<string>("");
+  const [reportData, setReportData] = useState<BprItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Ambil data laporan dari Supabase untuk periode akhir (2025)
+  const [letterNumber] = useState<number>(() =>
+    Math.floor(100 + Math.random() * 900),
+  );
+
+  // Ambil daftar BPR dari API
   useEffect(() => {
-    async function fetchReportData() {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from("bpr_indicators")
-        .select("bpr_name, status, dominant_trend, kpmm, npl")
-        .eq("tahun", 2025);
-
-      if (error) {
-        console.error("Gagal memuat data laporan:", error);
-      } else if (data) {
-        setReportData(data as LaporanItem[]);
+    async function fetchBprList() {
+      try {
+        const res = await fetch("/api/bpr");
+        const result = await res.json();
+        if (result.success && result.data) {
+          const names: string[] = Array.from(
+            new Set(result.data.map((item: BprItem) => item.bpr_name)),
+          );
+          setBprNames(names);
+          if (names.length > 0) setSelectedBpr(names[0]);
+        }
+      } catch (err) {
+        console.error("Gagal memuat daftar BPR:", err);
       }
-      setLoading(false);
     }
-
-    fetchReportData();
+    fetchBprList();
   }, []);
 
-  // Fungsi simulasi unduh laporan PDF resmi
-  const handleDownloadReport = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      setIsExporting(false);
-      window.print(); // Memanggil dialog cetak browser yang dapat disimpan sebagai PDF
-    }, 1200);
+  // Ambil data laporan spesifik BPR
+  useEffect(() => {
+    async function fetchBprReport() {
+      if (!selectedBpr) return;
+      setLoading(true);
+      try {
+        const res = await fetch(
+          `/api/bpr?bpr_name=${encodeURIComponent(selectedBpr)}`,
+        );
+        const result = await res.json();
+        if (result.success && result.data) {
+          const sorted = result.data.sort(
+            (a: BprItem, b: BprItem) => Number(a.tahun) - Number(b.tahun),
+          );
+          setReportData(sorted);
+        }
+      } catch (err) {
+        console.error("Gagal memuat data laporan BPR:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchBprReport();
+  }, [selectedBpr]);
+
+  const latestData = reportData[reportData.length - 1] || {};
+  const prevData = reportData[reportData.length - 2] || latestData;
+
+  const getTrendIndicator = (
+    current: number,
+    previous: number,
+    inverse: boolean = false,
+  ) => {
+    if (current > previous) {
+      return inverse ? (
+        <span className="inline-flex items-center text-red-600 font-bold">
+          <ArrowUpRight size={14} /> Meningkat
+        </span>
+      ) : (
+        <span className="inline-flex items-center text-emerald-600 font-bold">
+          <ArrowUpRight size={14} /> Meningkat
+        </span>
+      );
+    } else if (current < previous) {
+      return inverse ? (
+        <span className="inline-flex items-center text-emerald-600 font-bold">
+          <ArrowDownRight size={14} /> Menurun
+        </span>
+      ) : (
+        <span className="inline-flex items-center text-red-600 font-bold">
+          <ArrowDownRight size={14} /> Menurun
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center text-blue-600 font-bold">
+        <ArrowRight size={14} /> Stabil
+      </span>
+    );
   };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const currentDate = new Date().toLocaleDateString("id-ID", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
-      {/* Sidebar disembunyikan saat mode cetak */}
-      <div className="print:hidden">
-        <Sidebar />
-      </div>
-
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        <div className="print:hidden">
-          <Header />
-        </div>
-
-        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
-          {/* Header Modul Laporan (Hilang saat cetak) */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 print:hidden">
-            <div>
-              <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
-                <FileText size={14} />
-                <span>Modul Eksekutif & Dokumentasi (Live Supabase)</span>
+        <Header onOpenSidebar={() => setSidebarOpen(true)} />
+        <main className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
+          {/* Kontrol Navigasi (Sembunyi otomatis saat dicetak berkat kelas print:hidden) */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
+            <div className="flex items-center space-x-3">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+                <FileText size={20} />
               </div>
-              <h2 className="text-lg font-extrabold text-slate-800 tracking-tight">
-                Pusat Laporan Evaluasi & Pengawasan BPR
-              </h2>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Generate dan cetak rekapitulasi resmi profil serta tren
-                indikator keuangan portofolio.
-              </p>
+              <div>
+                <h2 className="text-sm font-extrabold text-slate-800">
+                  Dokumen Surat Laporan Pengawasan
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Format surat resmi kedinasan lembaga penilai.
+                </p>
+              </div>
             </div>
 
-            {/* Aksi / Tombol Download & Print */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full lg:w-auto">
-              <button
-                onClick={handleDownloadReport}
-                disabled={isExporting}
-                className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-md shadow-blue-600/20 disabled:opacity-50 cursor-pointer"
-              >
-                <Download size={15} />
-                <span>
-                  {isExporting
-                    ? "Menyiapkan Dokumen..."
-                    : "Cetak / Unduh PDF Resmi"}
-                </span>
-              </button>
+            <div className="flex items-center space-x-3 w-full sm:w-auto">
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto">
+                <Building2 size={16} className="text-slate-400" />
+                <select
+                  value={selectedBpr}
+                  onChange={(e) => setSelectedBpr(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer w-full"
+                >
+                  {bprNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
               <button
-                onClick={() => window.print()}
-                className="flex items-center justify-center space-x-2 bg-slate-50 hover:bg-slate-100 text-slate-700 px-3.5 py-2.5 rounded-xl text-xs font-bold transition border border-slate-200/80 cursor-pointer"
+                type="button"
+                onClick={handlePrint}
+                className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md shadow-blue-600/20 cursor-pointer shrink-0"
               >
-                <Printer size={15} />
-                <span>Cetak</span>
+                <Download size={14} />
+                <span>Cetak / Unduh Surat</span>
               </button>
             </div>
           </div>
 
-          {/* KOP SURAT RESMI KHUSUS CETAK / PDF */}
-          <div className="hidden print:block bg-white p-6 border-b-2 border-slate-800 mb-6 text-center space-y-1">
-            <div className="text-xs font-bold uppercase tracking-widest text-slate-500">
-              OTORITAS JASA KEUANGAN REPUBLIK INDONESIA
-            </div>
-            <h1 className="text-xl font-black text-slate-900 uppercase">
-              LAPORAN RESMI HASIL PENGAWASAN PORTOFOLIO BPR
-            </h1>
-            <p className="text-xs text-slate-600">
-              Periode Evaluasi Komparatif: {selectedPeriod} | Tanggal Cetak:{" "}
-              {new Date().toLocaleDateString("id-ID")}
-            </p>
-          </div>
-
-          {/* Kartu Ringkasan Statistik Laporan (Hilang saat cetak untuk efisiensi halaman) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 print:hidden">
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-              <div>
-                <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                  Total Entitas Dilaporkan
-                </div>
-                <div className="text-2xl font-extrabold text-slate-800 mt-1">
-                  5 BPR
-                </div>
-                <div className="text-[11px] text-emerald-600 font-semibold mt-1">
-                  ✓ Data terverifikasi lengkap
-                </div>
+          {/* KERTAS SURAT RESMI */}
+          <div
+            id="printable-report"
+            className="bg-white p-8 sm:p-14 rounded-2xl border border-slate-200/90 shadow-sm space-y-6 text-xs text-slate-900 leading-relaxed font-serif"
+          >
+            {/* KOP SURAT */}
+            <div className="border-b-4 border-double border-slate-900 pb-4 text-center space-y-1">
+              <div className="text-xs font-bold tracking-widest text-slate-700 uppercase">
+                OTORITAS JASA KEUANGAN REPUBLIK INDONESIA
               </div>
-              <div className="p-3 rounded-2xl bg-blue-50 text-blue-600">
-                <Building size={22} />
+              <div className="text-sm font-black tracking-wider text-slate-900 uppercase">
+                DEPARTEMEN PENGAWASAN LEMBAGA JASA KEUANGAN MIKRO
+              </div>
+              <div className="text-[11px] text-slate-600 font-sans">
+                Jl. Lapangan Banteng Timur No. 2-4, Jakarta Pusat 10710
               </div>
             </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
-              <div>
-                <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                  Periode Evaluasi
-                </div>
-                <div className="text-2xl font-extrabold text-slate-800 mt-1">
-                  {selectedPeriod}
-                </div>
-                <div className="text-[11px] text-slate-400 font-semibold mt-1">
-                  Multi-tahun historis
-                </div>
+            {loading ? (
+              <div className="py-20 text-center text-xs text-slate-400 font-sans">
+                Menyusun dokumen surat resmi...
               </div>
-              <div className="p-3 rounded-2xl bg-amber-50 text-amber-600">
-                <Calendar size={22} />
-              </div>
-            </div>
+            ) : (
+              <div className="space-y-6 font-sans">
+                {/* NOMOR & PERIHAL SURAT */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
+                  <div className="space-y-1">
+                    <table className="w-full">
+                      <tbody>
+                        <tr>
+                          <td className="font-bold w-20">Nomor</td>
+                          <td className="w-4">:</td>
+                          <td>B-{letterNumber}/KO.03/2026</td>
+                        </tr>
+                        <tr>
+                          <td className="font-bold">Sifat</td>
+                          <td>:</td>
+                          <td>Penting / Rahasia</td>
+                        </tr>
+                        <tr>
+                          <td className="font-bold">Lampiran</td>
+                          <td>:</td>
+                          <td>1 (Satu) Berkas Analisis</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="sm:text-right space-y-1">
+                    <div>Jakarta, {currentDate}</div>
+                    <div className="font-bold pt-2">Kepada Yth.</div>
+                    <div>Direksi {selectedBpr || "BPR Terlapor"}</div>
+                    <div>di Tempat</div>
+                  </div>
+                </div>
 
-            <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between sm:col-span-2 lg:col-span-1">
-              <div>
-                <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                  Status Dokumen
+                {/* PERIHAL */}
+                <div className="py-2 font-bold text-slate-900 uppercase tracking-wide border-y border-slate-200">
+                  Perihal: Laporan Hasil Evaluasi Kesehatan & Tren Kinerja
+                  Keuangan Entitas
                 </div>
-                <div className="text-xl font-extrabold text-slate-800 mt-1">
-                  Siap Ekspor
-                </div>
-                <div className="text-[11px] text-blue-600 font-semibold mt-1">
-                  Format: Standar Pengawasan OJK
-                </div>
-              </div>
-              <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
-                <CheckCircle size={22} />
-              </div>
-            </div>
-          </div>
 
-          {/* Preview Tabel Rekapitulasi Laporan */}
-          <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 print:border-none print:shadow-none print:p-0">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 print:hidden">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800">
-                  Pratinjau Ringkasan Eksekutif Portfolio BPR
-                </h3>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Rekapitulasi parameter pengawasan lintas entitas untuk dokumen
-                  resmi.
-                </p>
-              </div>
-              <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl">
-                OJK Secure Document
-              </span>
-            </div>
+                {/* ISI SURAT */}
+                <div className="space-y-4 text-justify font-sans text-slate-700">
+                  <p>
+                    Dengan hormat, sehubungan dengan pelaksanaan tugas
+                    pengawasan perbankan serta evaluasi berkala terhadap tingkat
+                    kesehatan bank perekonomian rakyat berdasarkan sistem
+                    pelaporan Otoritas Jasa Keuangan, bersama ini disampaikan
+                    Laporan Hasil Analisis Kinerja Keuangan untuk entitas{" "}
+                    <strong>{selectedBpr}</strong>.
+                  </p>
 
-            <div className="overflow-x-auto rounded-xl border border-slate-100 print:border-slate-800">
-              <table className="w-full text-center text-xs border-collapse min-w-[700px]">
-                <thead>
-                  <tr className="bg-slate-900 text-white print:bg-slate-200 print:text-black border-b border-slate-800">
-                    <th className="py-3 px-3 border-r border-slate-700 font-bold w-12">
-                      No
-                    </th>
-                    <th className="py-3 px-4 text-left border-r border-slate-700 font-bold">
-                      Nama BPR
-                    </th>
-                    <th className="py-3 px-4 border-r border-slate-700 font-bold">
-                      Status Pengawasan
-                    </th>
-                    <th className="py-3 px-4 text-left border-r border-slate-700 font-bold">
-                      Indikasi Utama
-                    </th>
-                    <th className="py-3 px-4 border-r border-slate-700 font-bold">
-                      KPMM (2025)
-                    </th>
-                    <th className="py-3 px-4 border-r border-slate-700 font-bold">
-                      NPL Gross (2025)
-                    </th>
-                    <th className="py-3 px-4 font-bold">Tren Dominan</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 text-slate-700 font-medium">
-                  {loading ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="py-6 text-center text-slate-400"
-                      >
-                        Memuat data laporan dari basis data Supabase...
-                      </td>
-                    </tr>
-                  ) : reportData.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7}
-                        className="py-6 text-center text-slate-400"
-                      >
-                        Tidak ada data laporan ditemukan.
-                      </td>
-                    </tr>
-                  ) : (
-                    reportData.map((item, index) => (
-                      <tr
-                        key={index}
-                        className="hover:bg-slate-50/70 transition-colors"
-                      >
-                        <td className="py-3 px-3 border-r border-slate-200 text-slate-500 font-semibold">
-                          {index + 1}
-                        </td>
-                        <td className="py-3 px-4 text-left border-r border-slate-200 font-bold text-slate-900 whitespace-nowrap">
-                          {item.bpr_name}
-                        </td>
-                        <td className="py-3 px-4 border-r border-slate-200 whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                              item.status === "HIGH ATTENTION"
-                                ? "bg-red-100 text-red-700 print:bg-transparent print:text-red-900"
-                                : item.status === "WATCH"
-                                  ? "bg-amber-100 text-amber-700 print:bg-transparent print:text-amber-900"
-                                  : "bg-emerald-100 text-emerald-700 print:bg-transparent print:text-emerald-900"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-left border-r border-slate-200 text-slate-600">
-                          {item.bpr_name === "BPR Angga"
-                            ? "NPL meningkat, ROA turun, BOPO naik"
-                            : item.bpr_name === "BPR Desimal"
-                              ? "Pertumbuhan kredit perlu pencadangan"
-                              : "Kinerja keuangan stabil dan sehat"}
-                        </td>
-                        <td className="py-3 px-4 border-r border-slate-200 font-bold text-slate-800 whitespace-nowrap">
-                          {item.kpmm}%
-                        </td>
-                        <td className="py-3 px-4 border-r border-slate-200 font-bold text-red-600 whitespace-nowrap">
-                          {item.npl}%
-                        </td>
-                        <td className="py-3 px-4 font-bold whitespace-nowrap">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] uppercase ${
-                              item.dominant_trend === "Memburuk"
-                                ? "bg-red-100 text-red-700 print:bg-transparent"
-                                : "bg-emerald-100 text-emerald-700 print:bg-transparent"
-                            }`}
-                          >
-                            {item.dominant_trend}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  {/* Ringkasan Parameter */}
+                  <div className="space-y-2 pt-1">
+                    <div className="font-bold text-slate-900">
+                      1. Ringkasan Parameter Utama (
+                      {latestData.tahun || "Tahun Berjalan"})
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-0.5">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase">
+                          Total Aset
+                        </div>
+                        <div className="text-xs font-black text-slate-900">
+                          Rp{" "}
+                          {(latestData.total_aset || 0).toLocaleString("id-ID")}{" "}
+                          Jt
+                        </div>
+                        <div className="text-[10px]">
+                          {getTrendIndicator(
+                            latestData.total_aset || 0,
+                            prevData.total_aset || 0,
+                          )}
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-0.5">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase">
+                          Total Kredit
+                        </div>
+                        <div className="text-xs font-black text-slate-900">
+                          Rp{" "}
+                          {(latestData.total_kredit || 0).toLocaleString(
+                            "id-ID",
+                          )}{" "}
+                          Jt
+                        </div>
+                        <div className="text-[10px]">
+                          {getTrendIndicator(
+                            latestData.total_kredit || 0,
+                            prevData.total_kredit || 0,
+                          )}
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-0.5">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase">
+                          Dana Pihak Ketiga
+                        </div>
+                        <div className="text-xs font-black text-slate-900">
+                          Rp {(latestData.dpk || 0).toLocaleString("id-ID")} Jt
+                        </div>
+                        <div className="text-[10px]">
+                          {getTrendIndicator(
+                            latestData.dpk || 0,
+                            prevData.dpk || 0,
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-            {/* Tanda Tangan Pengawas Khusus Cetak PDF */}
-            <div className="hidden print:flex justify-between items-end mt-12 pt-8 text-xs text-slate-800">
-              <div className="space-y-16 text-center">
-                <p>
-                  Mengetahui,
-                  <br />
-                  <strong>Kepala Pengawas Lembaga Keuangan</strong>
-                </p>
-                <div className="font-bold underline">
-                  ( ___________________________ )
+                  {/* Grafik Visualisasi Surat */}
+                  <div className="space-y-2 pt-2">
+                    <div className="font-bold text-slate-900">
+                      2. Grafik Visualisasi Pergerakan Tren Historis
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                        <div className="text-[11px] font-bold text-slate-700">
+                          Volume Usaha (Aset, Kredit, DPK)
+                        </div>
+                        <div className="h-48 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={reportData}>
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#cbd5e1"
+                              />
+                              <XAxis dataKey="tahun" fontSize={9} />
+                              <YAxis fontSize={9} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "9px" }} />
+                              <Line
+                                type="monotone"
+                                dataKey="total_aset"
+                                name="Aset"
+                                stroke="#2563eb"
+                                strokeWidth={2}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="total_kredit"
+                                name="Kredit"
+                                stroke="#16a34a"
+                                strokeWidth={2}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="dpk"
+                                name="DPK"
+                                stroke="#9333ea"
+                                strokeWidth={2}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                        <div className="text-[11px] font-bold text-slate-700">
+                          Rasio Utama (KPMM, NPL, ROA, BOPO)
+                        </div>
+                        <div className="h-48 w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={reportData}>
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="#cbd5e1"
+                              />
+                              <XAxis dataKey="tahun" fontSize={9} />
+                              <YAxis fontSize={9} />
+                              <Tooltip />
+                              <Legend wrapperStyle={{ fontSize: "9px" }} />
+                              <Line
+                                type="monotone"
+                                dataKey="kpmm"
+                                name="KPMM"
+                                stroke="#2563eb"
+                                strokeWidth={2}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="npl"
+                                name="NPL"
+                                stroke="#dc2626"
+                                strokeWidth={2}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="roa"
+                                name="ROA"
+                                stroke="#16a34a"
+                                strokeWidth={2}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="bopo"
+                                name="BOPO"
+                                stroke="#f59e0b"
+                                strokeWidth={2}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Tabel Data Historis */}
+                  <div className="space-y-2 pt-2">
+                    <div className="font-bold text-slate-900">
+                      3. Matriks Data Historis Multi-Tahun
+                    </div>
+                    <div className="overflow-x-auto rounded-lg border border-slate-200">
+                      <table className="w-full text-center text-[11px] border-collapse">
+                        <thead>
+                          <tr className="bg-slate-900 text-white">
+                            <th className="py-2 px-2.5 text-left">Tahun</th>
+                            <th className="py-2 px-2">KPMM (%)</th>
+                            <th className="py-2 px-2">NPL (%)</th>
+                            <th className="py-2 px-2">ROA (%)</th>
+                            <th className="py-2 px-2">BOPO (%)</th>
+                            <th className="py-2 px-2">NIM (%)</th>
+                            <th className="py-2 px-2">LDR (%)</th>
+                            <th className="py-2 px-2.5">Trend</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-medium">
+                          {reportData.map((row) => (
+                            <tr key={row.tahun} className="hover:bg-slate-50">
+                              <td className="py-2 px-2.5 text-left font-bold text-slate-900">
+                                {row.tahun}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.kpmm?.toFixed(2)}
+                              </td>
+                              <td
+                                className={`py-2 px-2 font-bold ${row.npl > 5 ? "text-red-600" : "text-slate-800"}`}
+                              >
+                                {row.npl?.toFixed(2)}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.roa?.toFixed(2)}
+                              </td>
+                              <td
+                                className={`py-2 px-2 font-bold ${row.bopo > 90 ? "text-red-600" : "text-slate-800"}`}
+                              >
+                                {row.bopo?.toFixed(2)}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.nim?.toFixed(2)}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.ldr?.toFixed(2)}
+                              </td>
+                              <td className="py-2 px-2.5 uppercase font-bold text-[10px]">
+                                {row.dominant_trend || "Stabil"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Penutup */}
+                  <p className="pt-2">
+                    Demikian laporan pengawasan ini disampaikan untuk menjadi
+                    perhatian dan dipergunakan sebagaimana mestinya dalam rangka
+                    menjaga kesehatan serta stabilitas kinerja lembaga keuangan.
+                  </p>
                 </div>
               </div>
-              <div className="space-y-16 text-center">
-                <p>
-                  Semarang, {new Date().toLocaleDateString("id-ID")}
-                  <br />
-                  <strong>Analis Senior Pengawasan BPR</strong>
-                </p>
-                <div className="font-bold underline">
-                  ( ___________________________ )
-                </div>
-              </div>
-            </div>
+            )}
           </div>
         </main>
       </div>
+
+      {/* CSS Khusus agar saat tombol cetak ditekan, hanya dokumen surat yang tampil dan bersih dari sidebar */}
+      <style jsx global>{`
+        @media print {
+          body * {
+            visibility: hidden;
+          }
+          #printable-report,
+          #printable-report * {
+            visibility: visible;
+          }
+          #printable-report {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
