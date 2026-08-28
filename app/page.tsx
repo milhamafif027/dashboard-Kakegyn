@@ -67,11 +67,11 @@ export default function DashboardPage() {
     };
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
+    <div className="min-h-screen md:h-screen flex bg-slate-100 relative overflow-x-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
+      <div className="flex-1 flex flex-col min-w-0 md:h-screen md:overflow-y-auto">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
-        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
+        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full flex-1">
           {/* Header Ringkas / Overview Atas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
