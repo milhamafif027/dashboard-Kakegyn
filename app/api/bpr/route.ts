@@ -157,7 +157,11 @@ export async function POST(request: Request) {
       dominant_trend: evaluated.dominant_trend,
     };
 
-    const { error } = await supabase.from("bpr_indicators").insert([payload]);
+    // Menggunakan upsert agar data ter-update otomatis jika kombinasi bpr_name, tahun, dan bulan sudah ada
+    // (Pastikan di database Supabase Anda sudah dibuat Unique Constraint pada kolom bpr_name, tahun, bulan)
+    const { error } = await supabase
+      .from("bpr_indicators")
+      .upsert([payload], { onConflict: "bpr_name,tahun,bulan" });
 
     if (error) {
       throw error;
