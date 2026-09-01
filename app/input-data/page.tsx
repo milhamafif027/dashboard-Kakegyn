@@ -226,7 +226,7 @@ export default function InputDataPage() {
     }
   };
 
-  const handleDelete = async (
+const handleDelete = async (
     id: number,
     name: string,
     bulan: number,
@@ -237,6 +237,9 @@ export default function InputDataPage() {
         `Apakah Anda yakin ingin menghapus data ${name} periode ${namaBulanLengkap[bulan]} ${tahun}?`,
       )
     ) {
+      // 1. Langsung hapus dari state lokal secara instan (tanpa menunggu fetch ulang)
+      setAllRecords((prev) => prev.filter((item) => item.id !== id));
+
       try {
         const baseUrl =
           typeof window !== "undefined" ? window.location.origin : "";
@@ -244,36 +247,18 @@ export default function InputDataPage() {
           method: "DELETE",
         });
         const result = await res.json();
+        
         if (result.success) {
-          alert("Data berhasil dihapus!");
-
-          // SOLUSI: Perbarui state lokal secara instan agar baris langsung hilang dari UI tabel
-          setAllRecords((prev) => prev.filter((item) => item.id !== id));
-
+          // Data berhasil dihapus di database Supabase, state lokal sudah dibersihkan duluan.
+          console.log("Data berhasil dihapus permanen.");
+        } else {
+          alert("Gagal menghapus di server: " + result.error);
+          // Jika gagal di server, muat ulang data aslinya
           const refreshRes = await fetch(`${baseUrl}/api/bpr`);
           const refreshResult = await refreshRes.json();
           if (refreshResult.success && refreshResult.data) {
             setAllRecords(refreshResult.data);
-            const names: string[] = Array.from(
-              new Set(
-                refreshResult.data.map(
-                  (item: BprExistingItem) => item.bpr_name,
-                ),
-              ),
-            );
-            setExistingBprs(names);
-            const years = Array.from(
-              new Set(
-                refreshResult.data.map((item: BprExistingItem) =>
-                  Number(item.tahun),
-                ),
-              ),
-            ) as number[];
-            years.sort((a, b) => b - a);
-            setAvailableYears(years);
           }
-        } else {
-          alert("Gagal menghapus: " + result.error);
         }
       } catch (err) {
         console.error("Kesalahan jaringan saat menghapus:", err);
