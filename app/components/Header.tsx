@@ -3,9 +3,10 @@ import { Calendar, ShieldCheck, Menu } from "lucide-react";
 
 interface HeaderProps {
   onOpenSidebar?: () => void;
+  periodeLabel?: string; // Opsional: teks periode dinamis jika ingin dikirim dari halaman utama
 }
 
-export default function Header({ onOpenSidebar }: HeaderProps) {
+export default function Header({ onOpenSidebar, periodeLabel }: HeaderProps) {
   return (
     <header className="bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 md:px-6 py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sticky top-0 z-30 shadow-2xs">
       {/* Judul Utama & Tombol Menu Mobile */}
@@ -36,11 +37,13 @@ export default function Header({ onOpenSidebar }: HeaderProps) {
 
       {/* Bagian Kanan: Periode & Profil */}
       <div className="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-end">
-        {/* Periode Badge */}
+        {/* Periode Badge Dinamis */}
         <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs text-slate-700">
           <Calendar size={14} className="text-blue-600 shrink-0" />
-          <span className="text-slate-400 font-medium">Periode:</span>
-          <span className="font-bold text-slate-800">2021-2025</span>
+          <span className="text-slate-400 font-medium">Sistem:</span>
+          <span className="font-bold text-slate-800">
+            {periodeLabel || "Live Database OJK"}
+          </span>
         </div>
 
         {/* Profil Pengawas Minimalis */}

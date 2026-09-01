@@ -23,6 +23,8 @@ interface RegulationItem {
 }
 
 export default function DokumenPedomanPage() {
+  // State untuk mengontrol buka/tutup sidebar di perangkat mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedPdf, setSelectedPdf] = useState<RegulationItem | null>(null);
 
   const regulations: RegulationItem[] = [
@@ -81,10 +83,14 @@ export default function DokumenPedomanPage() {
   ];
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
-      <Sidebar />
-      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
-        <Header />
+    <div className="flex h-screen bg-slate-100 overflow-hidden select-none relative">
+      {/* Sidebar dengan props state open & close */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto min-w-0">
+        {/* Header dengan pemicu fungsi buka sidebar */}
+        <Header onOpenSidebar={() => setSidebarOpen(true)} />
+
         <main className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full">
           {/* Header */}
           <div className="bg-white p-5 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center space-y-3 sm:space-y-0 sm:space-x-4">

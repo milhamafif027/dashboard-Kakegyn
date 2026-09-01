@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ArrowRight,
+  Calendar,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -24,6 +25,7 @@ import {
 interface BprItem {
   bpr_name: string;
   tahun: number;
+  bulan: number;
   total_aset: number;
   total_kredit: number;
   dpk: number;
@@ -36,20 +38,38 @@ interface BprItem {
   ldr: number;
   cash_ratio: number;
   dominant_trend: string;
+  [key: string]: unknown;
 }
+
+const namaBulanLengkap = [
+  "",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Ags",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
 
 export default function LaporanPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bprNames, setBprNames] = useState<string[]>([]);
   const [selectedBpr, setSelectedBpr] = useState<string>("");
-  const [reportData, setReportData] = useState<BprItem[]>([]);
+
+  // State tahun dinamis dari database dan tahun terpilih
+  const [availableYears, setAvailableYears] = useState<number[]>([2026]);
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+
+  const [allBprData, setAllBprData] = useState<BprItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [letterNumber] = useState<number>(() =>
-    Math.floor(100 + Math.random() * 900),
-  );
-
-  // Ambil daftar BPR dari API
+  // 1. Ambil daftar BPR dan tahun unik dari API secara dinamis
   useEffect(() => {
     async function fetchBprList() {
       try {
@@ -61,15 +81,31 @@ export default function LaporanPage() {
           );
           setBprNames(names);
           if (names.length > 0) setSelectedBpr(names[0]);
+
+          // Ekstrak daftar tahun unik secara dinamis
+          const yearsSet = new Set<number>();
+          result.data.forEach((item: { tahun: unknown }) => {
+            const y = Number(item.tahun);
+            if (!isNaN(y) && y > 0) {
+              yearsSet.add(y);
+            }
+          });
+          const years: number[] = Array.from(yearsSet).sort((a, b) => a - b);
+          if (years.length > 0) {
+            setAvailableYears(years);
+            setSelectedYear((prev) =>
+              years.includes(prev) ? prev : years[years.length - 1],
+            );
+          }
         }
       } catch (err) {
-        console.error("Gagal memuat daftar BPR:", err);
+        console.error("Gagal memuat daftar BPR dan tahun:", err);
       }
     }
     fetchBprList();
   }, []);
 
-  // Ambil data laporan spesifik BPR
+  // 2. Ambil data spesifik BPR
   useEffect(() => {
     async function fetchBprReport() {
       if (!selectedBpr) return;
@@ -80,10 +116,13 @@ export default function LaporanPage() {
         );
         const result = await res.json();
         if (result.success && result.data) {
-          const sorted = result.data.sort(
-            (a: BprItem, b: BprItem) => Number(a.tahun) - Number(b.tahun),
-          );
-          setReportData(sorted);
+          const sorted = result.data.sort((a: BprItem, b: BprItem) => {
+            if (Number(a.tahun) !== Number(b.tahun)) {
+              return Number(a.tahun) - Number(b.tahun);
+            }
+            return Number(a.bulan || 1) - Number(b.bulan || 1);
+          });
+          setAllBprData(sorted);
         }
       } catch (err) {
         console.error("Gagal memuat data laporan BPR:", err);
@@ -94,30 +133,51 @@ export default function LaporanPage() {
     fetchBprReport();
   }, [selectedBpr]);
 
-  const latestData = reportData[reportData.length - 1] || {};
-  const prevData = reportData[reportData.length - 2] || latestData;
+  // Data bulanan penuh 12 bulan untuk tahun yang dipilih
+  const currentYearMonthlyData = Array.from({ length: 12 }, (_, index) => {
+    const bulanNum = index + 1;
+    const found = allBprData.find(
+      (item) =>
+        Number(item.tahun) === selectedYear && Number(item.bulan) === bulanNum,
+    );
+    return {
+      tahun: selectedYear,
+      bulan: bulanNum,
+      bulanLabel: namaBulanLengkap[bulanNum],
+      total_aset: found ? Number(found.total_aset) || 0 : 0,
+      total_kredit: found ? Number(found.total_kredit) || 0 : 0,
+      dpk: found ? Number(found.dpk) || 0 : 0,
+      kpmm: found ? Number(found.kpmm) || 0 : 0,
+      npl: found ? Number(found.npl) || 0 : 0,
+      roa: found ? Number(found.roa) || 0 : 0,
+      bopo: found ? Number(found.bopo) || 0 : 0,
+      nim: found ? Number(found.nim) || 0 : 0,
+      ldr: found ? Number(found.ldr) || 0 : 0,
+      dominant_trend: found
+        ? String(found.dominant_trend || "Stabil")
+        : "Stabil",
+    };
+  });
 
-  const getTrendIndicator = (
-    current: number,
-    previous: number,
-    inverse: boolean = false,
-  ) => {
+  const validRowsForYear = allBprData.filter(
+    (item) => Number(item.tahun) === selectedYear,
+  );
+  const latestData = validRowsForYear[validRowsForYear.length - 1] || {};
+
+  const prevYearRows = allBprData.filter(
+    (item) => Number(item.tahun) === selectedYear - 1,
+  );
+  const prevData = prevYearRows[prevYearRows.length - 1] || latestData;
+
+  const getTrendIndicator = (current: number, previous: number) => {
     if (current > previous) {
-      return inverse ? (
-        <span className="inline-flex items-center text-red-600 font-bold">
-          <ArrowUpRight size={14} /> Meningkat
-        </span>
-      ) : (
+      return (
         <span className="inline-flex items-center text-emerald-600 font-bold">
           <ArrowUpRight size={14} /> Meningkat
         </span>
       );
     } else if (current < previous) {
-      return inverse ? (
-        <span className="inline-flex items-center text-emerald-600 font-bold">
-          <ArrowDownRight size={14} /> Menurun
-        </span>
-      ) : (
+      return (
         <span className="inline-flex items-center text-red-600 font-bold">
           <ArrowDownRight size={14} /> Menurun
         </span>
@@ -141,34 +201,36 @@ export default function LaporanPage() {
   });
 
   return (
-    <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
+    <div className="flex h-screen bg-slate-100 overflow-hidden select-none relative">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col h-screen overflow-y-auto">
+
+      <div className="flex-1 flex flex-col h-screen overflow-y-auto min-w-0">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
+
         <main className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
-          {/* Kontrol Navigasi (Sembunyi otomatis saat dicetak berkat kelas print:hidden) */}
-          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 print:hidden">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl">
+          {/* Kontrol Navigasi & Filter */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 print:hidden">
+            <div className="flex items-center space-x-3.5">
+              <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl shrink-0">
                 <FileText size={20} />
               </div>
               <div>
                 <h2 className="text-sm font-extrabold text-slate-800">
-                  Dokumen Surat Laporan Pengawasan
+                  Dokumen Laporan Evaluasi Bulanan ({selectedYear})
                 </h2>
-                <p className="text-xs text-slate-500">
-                  Format surat resmi kedinasan lembaga penilai.
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Laporan kinerja bulanan murni untuk entitas BPR terpilih.
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center space-x-3 w-full sm:w-auto">
-              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 w-full sm:w-auto">
-                <Building2 size={16} className="text-slate-400" />
+            <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                <Building2 size={15} className="text-slate-400 shrink-0" />
                 <select
                   value={selectedBpr}
                   onChange={(e) => setSelectedBpr(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer w-full"
+                  className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
                 >
                   {bprNames.map((name) => (
                     <option key={name} value={name}>
@@ -178,165 +240,150 @@ export default function LaporanPage() {
                 </select>
               </div>
 
+              {/* Filter Tahun Dinamis */}
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                <Calendar size={15} className="text-slate-400 shrink-0" />
+                <span className="text-[11px] font-bold text-slate-500">
+                  Tahun:
+                </span>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+                >
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <button
                 type="button"
                 onClick={handlePrint}
-                className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md shadow-blue-600/20 cursor-pointer shrink-0"
+                className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-md shadow-blue-600/20 cursor-pointer shrink-0 ml-auto lg:ml-0"
               >
                 <Download size={14} />
-                <span>Cetak / Unduh Surat</span>
+                <span>Cetak Laporan</span>
               </button>
             </div>
           </div>
 
-          {/* KERTAS SURAT RESMI */}
+          {/* KERTAS LAPORAN TANPA KOP */}
           <div
             id="printable-report"
-            className="bg-white p-8 sm:p-14 rounded-2xl border border-slate-200/90 shadow-sm space-y-6 text-xs text-slate-900 leading-relaxed font-serif"
+            className="bg-white p-8 sm:p-14 rounded-2xl border border-slate-200/90 shadow-sm space-y-6 text-xs text-slate-900 leading-relaxed font-sans"
           >
-            {/* KOP SURAT */}
-            <div className="border-b-4 border-double border-slate-900 pb-4 text-center space-y-1">
-              <div className="text-xs font-bold tracking-widest text-slate-700 uppercase">
-                OTORITAS JASA KEUANGAN REPUBLIK INDONESIA
-              </div>
-              <div className="text-sm font-black tracking-wider text-slate-900 uppercase">
-                DEPARTEMEN PENGAWASAN LEMBAGA JASA KEUANGAN MIKRO
-              </div>
-              <div className="text-[11px] text-slate-600 font-sans">
-                Jl. Lapangan Banteng Timur No. 2-4, Jakarta Pusat 10710
-              </div>
-            </div>
-
             {loading ? (
-              <div className="py-20 text-center text-xs text-slate-400 font-sans">
-                Menyusun dokumen surat resmi...
+              <div className="py-20 text-center text-xs text-slate-400">
+                Menyusun laporan bulanan...
               </div>
             ) : (
-              <div className="space-y-6 font-sans">
-                {/* NOMOR & PERIHAL SURAT */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
-                  <div className="space-y-1">
-                    <table className="w-full">
-                      <tbody>
-                        <tr>
-                          <td className="font-bold w-20">Nomor</td>
-                          <td className="w-4">:</td>
-                          <td>B-{letterNumber}/KO.03/2026</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">Sifat</td>
-                          <td>:</td>
-                          <td>Penting / Rahasia</td>
-                        </tr>
-                        <tr>
-                          <td className="font-bold">Lampiran</td>
-                          <td>:</td>
-                          <td>1 (Satu) Berkas Analisis</td>
-                        </tr>
-                      </tbody>
-                    </table>
+              <div className="space-y-6">
+                {/* JUDUL / PEMBUKA LANGSUNG */}
+                <div className="border-b border-slate-200 pb-3">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    Laporan Hasil Analisis Kinerja Keuangan
                   </div>
-                  <div className="sm:text-right space-y-1">
-                    <div>Jakarta, {currentDate}</div>
-                    <div className="font-bold pt-2">Kepada Yth.</div>
-                    <div>Direksi {selectedBpr || "BPR Terlapor"}</div>
-                    <div>di Tempat</div>
-                  </div>
+                  <h1 className="text-base font-black text-slate-900 mt-0.5">
+                    Entitas: {selectedBpr || "BPR Terlapor"} (Tahun{" "}
+                    {selectedYear})
+                  </h1>
                 </div>
 
-                {/* PERIHAL */}
-                <div className="py-2 font-bold text-slate-900 uppercase tracking-wide border-y border-slate-200">
-                  Perihal: Laporan Hasil Evaluasi Kesehatan & Tren Kinerja
-                  Keuangan Entitas
-                </div>
-
-                {/* ISI SURAT */}
-                <div className="space-y-4 text-justify font-sans text-slate-700">
+                {/* ISI LAPORAN */}
+                <div className="space-y-4 text-justify text-slate-700">
                   <p>
-                    Dengan hormat, sehubungan dengan pelaksanaan tugas
-                    pengawasan perbankan serta evaluasi berkala terhadap tingkat
-                    kesehatan bank perekonomian rakyat berdasarkan sistem
-                    pelaporan Otoritas Jasa Keuangan, bersama ini disampaikan
-                    Laporan Hasil Analisis Kinerja Keuangan untuk entitas{" "}
-                    <strong>{selectedBpr}</strong>.
+                    Dengan hormat, sehubungan dengan pelaksanaan evaluasi
+                    berkala terhadap tingkat kesehatan bank perekonomian rakyat,
+                    berikut disampaikan rekapitulasi perkembangan kinerja
+                    keuangan dan parameter pengawasan secara bulanan untuk
+                    entitas <strong>{selectedBpr}</strong> sepanjang periode
+                    tahun anggaran <strong>{selectedYear}</strong>.
                   </p>
 
                   {/* Ringkasan Parameter */}
                   <div className="space-y-2 pt-1">
-                    <div className="font-bold text-slate-900">
-                      1. Ringkasan Parameter Utama (
-                      {latestData.tahun || "Tahun Berjalan"})
+                    <div className="font-bold text-slate-900 text-xs">
+                      1. Ringkasan Posisi Terakhir ({selectedYear})
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-0.5">
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-0.5">
                         <div className="text-[10px] font-bold text-slate-500 uppercase">
                           Total Aset
                         </div>
                         <div className="text-xs font-black text-slate-900">
                           Rp{" "}
-                          {(latestData.total_aset || 0).toLocaleString("id-ID")}{" "}
-                          Jt
-                        </div>
-                        <div className="text-[10px]">
-                          {getTrendIndicator(
-                            latestData.total_aset || 0,
-                            prevData.total_aset || 0,
-                          )}
-                        </div>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-0.5">
-                        <div className="text-[10px] font-bold text-slate-500 uppercase">
-                          Total Kredit
-                        </div>
-                        <div className="text-xs font-black text-slate-900">
-                          Rp{" "}
-                          {(latestData.total_kredit || 0).toLocaleString(
+                          {(Number(latestData.total_aset) || 0).toLocaleString(
                             "id-ID",
                           )}{" "}
                           Jt
                         </div>
                         <div className="text-[10px]">
                           {getTrendIndicator(
-                            latestData.total_kredit || 0,
-                            prevData.total_kredit || 0,
+                            Number(latestData.total_aset) || 0,
+                            Number(prevData.total_aset) || 0,
                           )}
                         </div>
                       </div>
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-0.5">
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-0.5">
                         <div className="text-[10px] font-bold text-slate-500 uppercase">
-                          Dana Pihak Ketiga
+                          Total Kredit
                         </div>
                         <div className="text-xs font-black text-slate-900">
-                          Rp {(latestData.dpk || 0).toLocaleString("id-ID")} Jt
+                          Rp{" "}
+                          {(
+                            Number(latestData.total_kredit) || 0
+                          ).toLocaleString("id-ID")}{" "}
+                          Jt
                         </div>
                         <div className="text-[10px]">
                           {getTrendIndicator(
-                            latestData.dpk || 0,
-                            prevData.dpk || 0,
+                            Number(latestData.total_kredit) || 0,
+                            Number(prevData.total_kredit) || 0,
+                          )}
+                        </div>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-0.5">
+                        <div className="text-[10px] font-bold text-slate-500 uppercase">
+                          Dana Pihak Ketiga (DPK)
+                        </div>
+                        <div className="text-xs font-black text-slate-900">
+                          Rp{" "}
+                          {(Number(latestData.dpk) || 0).toLocaleString(
+                            "id-ID",
+                          )}{" "}
+                          Jt
+                        </div>
+                        <div className="text-[10px]">
+                          {getTrendIndicator(
+                            Number(latestData.dpk) || 0,
+                            Number(prevData.dpk) || 0,
                           )}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Grafik Visualisasi Surat */}
-                  <div className="space-y-2 pt-2">
-                    <div className="font-bold text-slate-900">
-                      2. Grafik Visualisasi Pergerakan Tren Historis
+                  {/* Grafik Visualisasi Bulanan (1 Tahun) */}
+                  <div className="space-y-3 pt-2">
+                    <div className="font-bold text-slate-900 text-xs">
+                      2. Grafik Pergerakan Tren Bulanan ({selectedYear})
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
                         <div className="text-[11px] font-bold text-slate-700">
-                          Volume Usaha (Aset, Kredit, DPK)
+                          Volume Usaha Bulanan (Aset, Kredit, DPK)
                         </div>
-                        <div className="h-48 w-full">
+                        <div className="h-52 w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={reportData}>
+                            <LineChart data={currentYearMonthlyData}>
                               <CartesianGrid
                                 strokeDasharray="3 3"
                                 stroke="#cbd5e1"
                               />
-                              <XAxis dataKey="tahun" fontSize={9} />
+                              <XAxis dataKey="bulanLabel" fontSize={9} />
                               <YAxis fontSize={9} />
                               <Tooltip />
                               <Legend wrapperStyle={{ fontSize: "9px" }} />
@@ -346,6 +393,7 @@ export default function LaporanPage() {
                                 name="Aset"
                                 stroke="#2563eb"
                                 strokeWidth={2}
+                                dot={{ r: 3 }}
                               />
                               <Line
                                 type="monotone"
@@ -353,6 +401,7 @@ export default function LaporanPage() {
                                 name="Kredit"
                                 stroke="#16a34a"
                                 strokeWidth={2}
+                                dot={{ r: 3 }}
                               />
                               <Line
                                 type="monotone"
@@ -360,24 +409,25 @@ export default function LaporanPage() {
                                 name="DPK"
                                 stroke="#9333ea"
                                 strokeWidth={2}
+                                dot={{ r: 3 }}
                               />
                             </LineChart>
                           </ResponsiveContainer>
                         </div>
                       </div>
 
-                      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-1">
+                      <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-1">
                         <div className="text-[11px] font-bold text-slate-700">
-                          Rasio Utama (KPMM, NPL, ROA, BOPO)
+                          Rasio Utama Bulanan (KPMM, NPL, ROA, BOPO)
                         </div>
-                        <div className="h-48 w-full">
+                        <div className="h-52 w-full">
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={reportData}>
+                            <LineChart data={currentYearMonthlyData}>
                               <CartesianGrid
                                 strokeDasharray="3 3"
                                 stroke="#cbd5e1"
                               />
-                              <XAxis dataKey="tahun" fontSize={9} />
+                              <XAxis dataKey="bulanLabel" fontSize={9} />
                               <YAxis fontSize={9} />
                               <Tooltip />
                               <Legend wrapperStyle={{ fontSize: "9px" }} />
@@ -387,6 +437,7 @@ export default function LaporanPage() {
                                 name="KPMM"
                                 stroke="#2563eb"
                                 strokeWidth={2}
+                                dot={{ r: 3 }}
                               />
                               <Line
                                 type="monotone"
@@ -394,6 +445,7 @@ export default function LaporanPage() {
                                 name="NPL"
                                 stroke="#dc2626"
                                 strokeWidth={2}
+                                dot={{ r: 3 }}
                               />
                               <Line
                                 type="monotone"
@@ -401,6 +453,7 @@ export default function LaporanPage() {
                                 name="ROA"
                                 stroke="#16a34a"
                                 strokeWidth={2}
+                                dot={{ r: 3 }}
                               />
                               <Line
                                 type="monotone"
@@ -408,6 +461,7 @@ export default function LaporanPage() {
                                 name="BOPO"
                                 stroke="#f59e0b"
                                 strokeWidth={2}
+                                dot={{ r: 3 }}
                               />
                             </LineChart>
                           </ResponsiveContainer>
@@ -416,55 +470,55 @@ export default function LaporanPage() {
                     </div>
                   </div>
 
-                  {/* Tabel Data Historis */}
+                  {/* Tabel Rekapitulasi Per Bulan (1 Tahun Penuh) */}
                   <div className="space-y-2 pt-2">
-                    <div className="font-bold text-slate-900">
-                      3. Matriks Data Historis Multi-Tahun
+                    <div className="font-bold text-slate-900 text-xs">
+                      3. Matriks Rekapitulasi Bulanan Tahun {selectedYear}
                     </div>
-                    <div className="overflow-x-auto rounded-lg border border-slate-200">
-                      <table className="w-full text-center text-[11px] border-collapse">
+                    <div className="overflow-x-auto rounded-xl border border-slate-200">
+                      <table className="w-full text-center text-[11px] border-collapse whitespace-nowrap">
                         <thead>
                           <tr className="bg-slate-900 text-white">
-                            <th className="py-2 px-2.5 text-left">Tahun</th>
-                            <th className="py-2 px-2">KPMM (%)</th>
-                            <th className="py-2 px-2">NPL (%)</th>
-                            <th className="py-2 px-2">ROA (%)</th>
-                            <th className="py-2 px-2">BOPO (%)</th>
-                            <th className="py-2 px-2">NIM (%)</th>
-                            <th className="py-2 px-2">LDR (%)</th>
-                            <th className="py-2 px-2.5">Trend</th>
+                            <th className="py-2.5 px-3 text-left">Bulan</th>
+                            <th className="py-2.5 px-2">KPMM (%)</th>
+                            <th className="py-2.5 px-2">NPL (%)</th>
+                            <th className="py-2.5 px-2">ROA (%)</th>
+                            <th className="py-2.5 px-2">BOPO (%)</th>
+                            <th className="py-2.5 px-2">NIM (%)</th>
+                            <th className="py-2.5 px-2">LDR (%)</th>
+                            <th className="py-2.5 px-3 text-right">Trend</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
-                          {reportData.map((row) => (
-                            <tr key={row.tahun} className="hover:bg-slate-50">
-                              <td className="py-2 px-2.5 text-left font-bold text-slate-900">
-                                {row.tahun}
+                          {currentYearMonthlyData.map((row) => (
+                            <tr key={row.bulan} className="hover:bg-slate-50">
+                              <td className="py-2 px-3 text-left font-bold text-slate-900">
+                                {row.bulanLabel}
                               </td>
                               <td className="py-2 px-2">
-                                {row.kpmm?.toFixed(2)}
+                                {Number(row.kpmm || 0).toFixed(2)}
                               </td>
                               <td
-                                className={`py-2 px-2 font-bold ${row.npl > 5 ? "text-red-600" : "text-slate-800"}`}
+                                className={`py-2 px-2 font-bold ${Number(row.npl || 0) > 5 ? "text-red-600" : "text-slate-800"}`}
                               >
-                                {row.npl?.toFixed(2)}
+                                {Number(row.npl || 0).toFixed(2)}
                               </td>
                               <td className="py-2 px-2">
-                                {row.roa?.toFixed(2)}
+                                {Number(row.roa || 0).toFixed(2)}
                               </td>
                               <td
-                                className={`py-2 px-2 font-bold ${row.bopo > 90 ? "text-red-600" : "text-slate-800"}`}
+                                className={`py-2 px-2 font-bold ${Number(row.bopo || 0) > 95 ? "text-red-600" : "text-slate-800"}`}
                               >
-                                {row.bopo?.toFixed(2)}
+                                {Number(row.bopo || 0).toFixed(2)}
                               </td>
                               <td className="py-2 px-2">
-                                {row.nim?.toFixed(2)}
+                                {Number(row.nim || 0).toFixed(2)}
                               </td>
                               <td className="py-2 px-2">
-                                {row.ldr?.toFixed(2)}
+                                {Number(row.ldr || 0).toFixed(2)}
                               </td>
-                              <td className="py-2 px-2.5 uppercase font-bold text-[10px]">
-                                {row.dominant_trend || "Stabil"}
+                              <td className="py-2 px-3 text-right uppercase font-bold text-[10px]">
+                                {row.dominant_trend}
                               </td>
                             </tr>
                           ))}
@@ -474,11 +528,15 @@ export default function LaporanPage() {
                   </div>
 
                   {/* Penutup */}
-                  <p className="pt-2">
-                    Demikian laporan pengawasan ini disampaikan untuk menjadi
-                    perhatian dan dipergunakan sebagaimana mestinya dalam rangka
-                    menjaga kesehatan serta stabilitas kinerja lembaga keuangan.
+                  <p className="pt-3">
+                    Demikian laporan evaluasi bulanan ini disusun untuk
+                    dipergunakan sebagaimana mestinya dalam rangka pengawasan
+                    dan pembinaan berkelanjutan.
                   </p>
+                  <div className="pt-4 text-right space-y-1">
+                    <div>Jakarta, {currentDate}</div>
+                    <div className="font-bold pt-8">Tim Pengawas BPR</div>
+                  </div>
                 </div>
               </div>
             )}
@@ -486,7 +544,7 @@ export default function LaporanPage() {
         </main>
       </div>
 
-      {/* CSS Khusus agar saat tombol cetak ditekan, hanya dokumen surat yang tampil dan bersih dari sidebar */}
+      {/* CSS Khusus Cetak */}
       <style jsx global>{`
         @media print {
           body * {

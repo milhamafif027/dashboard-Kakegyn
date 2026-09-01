@@ -8,16 +8,30 @@ import {
   AlertTriangle,
   CheckCircle,
   ShieldAlert,
+  Calendar,
 } from "lucide-react";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+} from "recharts";
 
 interface BprDetailRecord {
   bpr_name: string;
   tahun: number;
+  bulan: number;
   total_aset: number;
   total_kredit: number;
   dpk: number;
   kpmm: number;
   npl: number;
+  kkl_gross: number;
+  miapb: number;
   ppka: number;
   roa: number;
   bopo: number;
@@ -26,29 +40,50 @@ interface BprDetailRecord {
   cash_ratio: number;
   status: string;
   dominant_trend: string;
+  [key: string]: unknown;
 }
+
+const namaBulanLengkap = [
+  "",
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
 
 export default function DetailBPRPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bprList, setBprList] = useState<string[]>([]);
   const [selectedBpr, setSelectedBpr] = useState<string>("BPR Angga");
+
+  // State daftar tahun dinamis dari database dan rentang fallback
+  const [availableYears, setAvailableYears] = useState<number[]>([2026]);
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedBulan, setSelectedBulan] = useState<number>(1);
+
   const [bprRecords, setBprRecords] = useState<BprDetailRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Ambil daftar nama BPR unik dari API lokal MySQL
+  // 1. Ambil daftar nama BPR dan daftar tahun unik dari database MySQL
   useEffect(() => {
-    async function fetchBprNames() {
+    async function fetchMetaData() {
       try {
         const res = await fetch("/api/bpr");
         const result = await res.json();
         const data = result.data;
 
         if (result.error) {
-          console.error(
-            "Gagal memuat nama BPR dari database lokal:",
-            result.error,
-          );
+          console.error("Gagal memuat data dari database:", result.error);
         } else if (data) {
+          // Ekstrak nama BPR unik
           const uniqueNames = Array.from(
             new Set(
               data.map(
@@ -60,19 +95,31 @@ export default function DetailBPRPage() {
           if (uniqueNames.length > 0 && !uniqueNames.includes(selectedBpr)) {
             setSelectedBpr(uniqueNames[0]);
           }
+
+          // Ekstrak tahun unik secara dinamis
+          const yearsSet = new Set<number>();
+          data.forEach((item: { tahun: unknown }) => {
+            const y = Number(item.tahun);
+            if (!isNaN(y) && y > 0) {
+              yearsSet.add(y);
+            }
+          });
+          const years: number[] = Array.from(yearsSet).sort((a, b) => a - b);
+          if (years.length > 0) {
+            setAvailableYears(years);
+            setSelectedYear((prev) =>
+              years.includes(prev) ? prev : years[years.length - 1],
+            );
+          }
         }
       } catch (err) {
-        console.error(
-          "Kesalahan jaringan saat mengambil daftar nama BPR:",
-          err,
-        );
+        console.error("Kesalahan jaringan saat mengambil metadata BPR:", err);
       }
     }
-    fetchBprNames();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchMetaData();
   }, []);
 
-  // 2. Ambil data historis (2021-2025) untuk BPR yang sedang dipilih dari API lokal MySQL
+  // 2. Ambil data historis untuk BPR yang sedang dipilih
   useEffect(() => {
     async function fetchBprDetails() {
       setLoading(true);
@@ -86,10 +133,13 @@ export default function DetailBPRPage() {
         if (result.error) {
           console.error("Gagal memuat detail BPR:", result.error);
         } else if (data) {
-          // Urutkan berdasarkan tahun secara ascending
           const sorted = data.sort(
-            (a: Record<string, unknown>, b: Record<string, unknown>) =>
-              Number(a.tahun) - Number(b.tahun),
+            (a: Record<string, unknown>, b: Record<string, unknown>) => {
+              if (Number(a.tahun) !== Number(b.tahun)) {
+                return Number(a.tahun) - Number(b.tahun);
+              }
+              return Number(a.bulan) - Number(b.bulan);
+            },
           );
           setBprRecords(sorted as BprDetailRecord[]);
         }
@@ -105,33 +155,45 @@ export default function DetailBPRPage() {
     }
   }, [selectedBpr]);
 
-  // Cari data tahun awal (2021) dan akhir (2025)
-  const record2021 = bprRecords.find((r) => r.tahun === 2021) || bprRecords[0];
-  const record2025 =
-    bprRecords.find((r) => r.tahun === 2025) ||
-    bprRecords[bprRecords.length - 1];
+  // Ambil data pembanding awal (record pertama) dan data akhir berdasarkan bulan & tahun yang dipilih
+  const recordAwal = bprRecords[0];
+  const recordAkhir =
+    bprRecords.find(
+      (r) =>
+        Number(r.tahun) === selectedYear && Number(r.bulan) === selectedBulan,
+    ) || bprRecords[bprRecords.length - 1];
 
-  const currentStatus = record2025?.status || "STABLE";
-  const currentTrend = record2025?.dominant_trend || "Stabil";
+  const currentStatus = recordAkhir?.status || "STABLE";
+  const currentTrend = recordAkhir?.dominant_trend || "Stabil";
 
-  // Hitung peringkat sederhana berdasarkan nama/status
   const rankMap: Record<string, number> = {
     "BPR Angga": 1,
     "BPR Desimal": 2,
-    "BPR Cendana": 3,
-    "BPR Bromo": 4,
-    "BPR Expres": 5,
+    "BPR Makmur": 3,
+    "BPR Sejahtera": 4,
+    "BPR Lestari": 5,
   };
   const currentRank = rankMap[selectedBpr] || 1;
 
-  // Indikasi utama dinamis
-  let mainIndication = "Kinerja keuangan stabil dan sehat secara portofolio";
+  let mainIndication = "Kinerja keuangan stabil dan sehat secara portofolio.";
   if (selectedBpr === "BPR Angga")
-    mainIndication = "NPL meningkat, ROA turun, BOPO naik";
+    mainIndication =
+      "NPL sempat meningkat pada pertengahan tahun, kini berangsur pulih.";
   else if (selectedBpr === "BPR Desimal")
-    mainIndication = "Pertumbuhan kredit perlu diimbangi pencadangan";
-  else if (selectedBpr === "BPR Cendana")
-    mainIndication = "Fluktuasi pada rasio efisiensi operasional";
+    mainIndication = "Pertumbuhan kredit ekspansif dengan likuiditas terjaga.";
+  else if (selectedBpr === "BPR Makmur")
+    mainIndication = "Efisiensi operasional sangat baik dengan ROA tinggi.";
+  else if (selectedBpr === "BPR Sejahtera")
+    mainIndication =
+      "Skala aset besar dengan pengawasan reguler pada kualitas aset.";
+  else if (selectedBpr === "BPR Lestari")
+    mainIndication =
+      "Permodalan (CAR) sangat kuat dan likuiditas sangat sehat.";
+
+  // Filter data untuk grafik tren BPR aktif pada tahun yang dipilih
+  const chartDataYear = bprRecords.filter(
+    (r) => Number(r.tahun) === selectedYear,
+  );
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
@@ -152,8 +214,8 @@ export default function DetailBPRPage() {
                 Detail Profil & Kinerja Keuangan BPR
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Evaluasi mendalam rekam jejak historis dan status kesehatan
-                entitas terpilih.
+                Evaluasi mendalam rekam jejak historis bulanan dan status
+                kesehatan entitas terpilih.
               </p>
             </div>
 
@@ -181,9 +243,56 @@ export default function DetailBPRPage() {
             </div>
           </div>
 
+          {/* Filter Periode Evaluasi (Bulan & Tahun Dinamis) */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="text-xs font-extrabold text-slate-700">
+              Periode Evaluasi Aktif:{" "}
+              <span className="text-blue-600">
+                {namaBulanLengkap[selectedBulan]} {selectedYear}
+              </span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                <span className="text-[11px] font-bold text-slate-500">
+                  Bulan:
+                </span>
+                <select
+                  value={selectedBulan}
+                  onChange={(e) => setSelectedBulan(Number(e.target.value))}
+                  className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+                >
+                  {namaBulanLengkap.slice(1).map((m, idx) => (
+                    <option key={idx + 1} value={idx + 1}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filter Tahun Dinamis */}
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                <Calendar size={16} className="text-slate-400" />
+                <span className="text-[11px] font-bold text-slate-500">
+                  Tahun:
+                </span>
+                <select
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(Number(e.target.value))}
+                  className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+                >
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Kartu Ringkasan Profil BPR Terpilih */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-            {/* Kartu 1: Lembaga Terpilih */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
@@ -197,30 +306,32 @@ export default function DetailBPRPage() {
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between items-center">
-                <span>Peringkat Pengawasan:</span>
+                <span>Peringkat Portofolio:</span>
                 <span className="font-extrabold text-slate-800 bg-slate-100 px-2 py-0.5 rounded-lg">
-                  #{currentRank} dari 5
+                  #{currentRank} dari {bprList.length || 5}
                 </span>
               </div>
             </div>
 
-            {/* Kartu 2: Status Pengawasan */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                  Status Pengawasan
+                  Status Pengawasan ({namaBulanLengkap[selectedBulan]}{" "}
+                  {selectedYear})
                 </div>
                 <div className="mt-2.5">
                   <span
                     className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-extrabold tracking-wide ${
-                      currentStatus === "HIGH ATTENTION"
+                      currentStatus === "HIGH ATTENTION" ||
+                      currentStatus === "WARNING"
                         ? "bg-red-100 text-red-700 border border-red-200"
                         : currentStatus === "WATCH"
                           ? "bg-amber-100 text-amber-700 border border-amber-200"
                           : "bg-emerald-100 text-emerald-700 border border-emerald-200"
                     }`}
                   >
-                    {currentStatus === "HIGH ATTENTION" ? (
+                    {currentStatus === "HIGH ATTENTION" ||
+                    currentStatus === "WARNING" ? (
                       <AlertTriangle size={14} className="shrink-0" />
                     ) : (
                       <CheckCircle size={14} className="shrink-0" />
@@ -235,24 +346,15 @@ export default function DetailBPRPage() {
               </div>
             </div>
 
-            {/* Kartu 3: Kecenderungan Tren */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                  Kecenderungan Tren (2021-2025)
+                  Kecenderungan Tren Bulanan
                 </div>
                 <div className="mt-2.5">
-                  <span
-                    className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-extrabold tracking-wide ${
-                      currentTrend === "Memburuk"
-                        ? "bg-red-100 text-red-700 border border-red-200"
-                        : currentTrend === "Membaik"
-                          ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
-                          : "bg-blue-100 text-blue-700 border border-blue-200"
-                    }`}
-                  >
+                  <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-extrabold tracking-wide bg-blue-100 text-blue-700 border border-blue-200">
                     <ShieldAlert size={14} className="shrink-0" />
-                    <span>Dominan {currentTrend}</span>
+                    <span>{currentTrend}</span>
                   </span>
                 </div>
               </div>
@@ -262,16 +364,69 @@ export default function DetailBPRPage() {
             </div>
           </div>
 
+          {/* Grafik Tren Bulanan */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div>
+              <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                Grafik Tren Kinerja Bulanan — {selectedBpr} ({selectedYear})
+              </h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Pergerakan indikator utama sepanjang tahun pilihan.
+              </p>
+            </div>
+
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartDataYear}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis
+                    dataKey="bulan"
+                    fontSize={11}
+                    stroke="#64748b"
+                    tickFormatter={(m) => namaBulanLengkap[m]?.slice(0, 3) || m}
+                  />
+                  <YAxis fontSize={11} stroke="#64748b" />
+                  <Tooltip />
+                  <Legend wrapperStyle={{ fontSize: "11px" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="total_aset"
+                    name="Total Aset (Jt)"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="total_kredit"
+                    name="Total Kredit (Jt)"
+                    stroke="#16a34a"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="dpk"
+                    name="DPK (Jt)"
+                    stroke="#9333ea"
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
           {/* Tabel Detail Indikator Keuangan Historis */}
           <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
-                  Rincian Historis 11 Indikator Keuangan — {selectedBpr}
+                  Rincian Indikator Keuangan — {selectedBpr}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Perbandingan performa awal periode (2021) dan akhir periode
-                  (2025).
+                  Perbandingan awal periode vs periode laporan (
+                  {namaBulanLengkap[selectedBulan]} {selectedYear}).
                 </p>
               </div>
               <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl shrink-0">
@@ -286,22 +441,33 @@ export default function DetailBPRPage() {
                     <th className="py-3.5 px-4 text-left border-r border-slate-200/60 font-bold uppercase tracking-wider text-[11px]">
                       Indikator Keuangan
                     </th>
-                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-32">
-                      Nilai 2021
+                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-36">
+                      Nilai Awal
                     </th>
-                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-32">
-                      Nilai 2025
+                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-36">
+                      Nilai ({namaBulanLengkap[selectedBulan].slice(0, 3)}{" "}
+                      {selectedYear})
                     </th>
                     <th className="py-3.5 px-4 font-bold w-36">Arah Tren</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
                   {[
-                    { label: "Total Aset (Rp juta)", key: "total_aset" },
-                    { label: "Total Kredit (Rp juta)", key: "total_kredit" },
-                    { label: "DPK (Rp juta)", key: "dpk" },
-                    { label: "KPMM (%)", key: "kpmm" },
+                    {
+                      label: "Total Aset (Rp juta)",
+                      key: "total_aset",
+                      isCurrency: true,
+                    },
+                    {
+                      label: "Total Kredit (Rp juta)",
+                      key: "total_kredit",
+                      isCurrency: true,
+                    },
+                    { label: "DPK (Rp juta)", key: "dpk", isCurrency: true },
+                    { label: "KPMM/CAR (%)", key: "kpmm" },
                     { label: "NPL Gross (%)", key: "npl", alert: true },
+                    { label: "KKL Gross (%)", key: "kkl_gross" },
+                    { label: "MIAPB (%)", key: "miapb" },
                     { label: "Cadangan / PPKA (%)", key: "ppka" },
                     { label: "ROA (%)", key: "roa" },
                     { label: "BOPO (%)", key: "bopo", alert: true },
@@ -309,17 +475,12 @@ export default function DetailBPRPage() {
                     { label: "LDR (%)", key: "ldr" },
                     { label: "Cash Ratio (%)", key: "cash_ratio" },
                   ].map((row, idx) => {
-                    const rec21 = record2021 as unknown as Record<
-                      string,
-                      string | number
-                    >;
-                    const rec25 = record2025 as unknown as Record<
-                      string,
-                      string | number
-                    >;
-
-                    const val2021 = rec21 ? rec21[row.key] : "-";
-                    const val2025 = rec25 ? rec25[row.key] : "-";
+                    const valAwal = recordAwal
+                      ? Number(recordAwal[row.key] || 0)
+                      : 0;
+                    const valAkhir = recordAkhir
+                      ? Number(recordAkhir[row.key] || 0)
+                      : 0;
 
                     return (
                       <tr
@@ -330,22 +491,20 @@ export default function DetailBPRPage() {
                           {row.label}
                         </td>
                         <td className="py-3 px-4 border-r border-slate-100 text-slate-600 font-semibold">
-                          {typeof val2021 === "number"
-                            ? val2021.toLocaleString("id-ID")
-                            : String(val2021)}
+                          {row.isCurrency
+                            ? valAwal.toLocaleString("id-ID")
+                            : valAwal.toFixed(2)}
                         </td>
                         <td
                           className={`py-3 px-4 border-r border-slate-100 font-bold ${
-                            row.alert &&
-                            typeof val2025 === "number" &&
-                            val2025 > (row.key === "npl" ? 5 : 90)
+                            row.alert && valAkhir > (row.key === "npl" ? 5 : 95)
                               ? "text-red-600 bg-red-50/40"
                               : "text-slate-800"
                           }`}
                         >
-                          {typeof val2025 === "number"
-                            ? val2025.toLocaleString("id-ID")
-                            : String(val2025)}
+                          {row.isCurrency
+                            ? valAkhir.toLocaleString("id-ID")
+                            : valAkhir.toFixed(2)}
                         </td>
                         <td className="py-3 px-4 font-semibold">
                           <span className="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">

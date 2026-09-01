@@ -1,11 +1,17 @@
 "use client";
-import { useState, useEffect } from "react";
-import { ArrowDownRight, ArrowUpRight, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  ArrowRight,
+  Calendar,
+} from "lucide-react";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
 
 interface KpiGridProps {
   startYear?: number;
   endYear?: number;
+  data: Record<string, unknown>[];
 }
 
 interface KpiItem {
@@ -17,256 +23,277 @@ interface KpiItem {
   sparkline: { v: number }[];
 }
 
+const namaBulanLengkap = [
+  "",
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
 export default function KpiGrid({
   startYear = 2021,
   endYear = 2025,
+  data = [],
 }: KpiGridProps) {
-  const [kpiData, setKpiData] = useState<KpiItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  // Ekstrak daftar tahun unik dari data MySQL secara dinamis
+  const dynamicYears: number[] = Array.from(
+    new Set(
+      data.map((row) => Number(row.tahun)).filter((y) => !isNaN(y) && y > 0),
+    ),
+  ).sort((a, b) => a - b);
 
-  // Buat daftar tahun dinamis berdasarkan rentang startYear hingga endYear
-  const yearsList: number[] = [];
-  const s = Math.min(startYear, endYear);
-  const e = Math.max(startYear, endYear);
-  for (let y = s; y <= e; y++) {
-    yearsList.push(y);
-  }
+  // Jika data belum termuat atau kosong, gunakan rentang cadangan dari props
+  const yearsList: number[] =
+    dynamicYears.length > 0
+      ? dynamicYears
+      : (() => {
+          const list = [];
+          const s = Math.min(startYear, endYear);
+          const e = Math.max(startYear, endYear);
+          for (let y = s; y <= e; y++) list.push(y);
+          return list;
+        })();
 
-  useEffect(() => {
-    async function fetchKpiMetrics() {
-      setLoading(true);
-      try {
-        // Ambil seluruh data historis dari API lokal MySQL
-        const res = await fetch("/api/bpr");
-        const result = await res.json();
-        const data = result.data;
+  const defaultYear =
+    yearsList.length > 0 ? yearsList[yearsList.length - 1] : endYear;
 
-        if (result.error) {
-          console.error(
-            "Gagal memuat metrik KPI dari database lokal:",
-            result.error,
-          );
-        } else if (data && data.length > 0) {
-          // Ambil data tahun terakhir dari rentang yang dipilih (endYear) untuk nilai saat ini
-          const latestYearData = data.filter(
-            (row: Record<string, unknown>) => Number(row.tahun) === e,
-          );
+  // State untuk filter tahun dan bulan aktif pada KPI Grid
+  const [selectedYear, setSelectedYear] = useState<number>(defaultYear);
+  const [selectedBulan, setSelectedBulan] = useState<number>(12); // Default Desember
 
-          // Hitung total atau rata-rata portofolio untuk tahun akhir (endYear)
-          const totalAset = latestYearData.reduce(
-            (acc: number, curr: Record<string, unknown>) =>
-              acc + (Number(curr.total_aset) || 0),
-            0,
-          );
-          const totalKredit = latestYearData.reduce(
-            (acc: number, curr: Record<string, unknown>) =>
-              acc + (Number(curr.total_kredit) || 0),
-            0,
-          );
-          const totalDpk = latestYearData.reduce(
-            (acc: number, curr: Record<string, unknown>) =>
-              acc + (Number(curr.dpk) || 0),
-            0,
-          );
+  const activeYear = yearsList.includes(selectedYear)
+    ? selectedYear
+    : defaultYear;
 
-          const avgKpmm =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.kpmm) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
-          const avgNpl =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.npl) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
-          const avgPpka =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.ppka) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
-          const avgRoa =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.roa) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
-          const avgBopo =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.bopo) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
-          const avgNim =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.nim) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
-          const avgLdr =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.ldr) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
-          const avgCashRatio =
-            latestYearData.length > 0
-              ? latestYearData.reduce(
-                  (acc: number, curr: Record<string, unknown>) =>
-                    acc + (Number(curr.cash_ratio) || 0),
-                  0,
-                ) / latestYearData.length
-              : 0;
+  // Filter data berdasarkan tahun aktif dan bulan aktif
+  const filteredPeriodData = data.filter((row: Record<string, unknown>) => {
+    const matchYear = Number(row.tahun) === activeYear;
+    const matchBulan =
+      selectedBulan === 0 ? true : Number(row.bulan) === selectedBulan;
+    return matchYear && matchBulan;
+  });
 
-          // Helper untuk sparkline mengikuti rentang tahun dinamis (yearsList)
-          const getYearlyAvg = (key: string, isTotal: boolean = false) => {
-            return yearsList.map((yr) => {
-              const yrRows = data.filter(
-                (row: Record<string, unknown>) => Number(row.tahun) === yr,
-              );
-              if (yrRows.length === 0) return { v: 0 };
-              const sum = yrRows.reduce(
-                (acc: number, curr: Record<string, unknown>) =>
-                  acc + (Number(curr[key]) || 0),
-                0,
-              );
-              const val = isTotal ? sum : sum / yrRows.length;
-              return { v: +val.toFixed(2) };
-            });
-          };
+  // Hitung total atau rata-rata portofolio berdasarkan data periode yang difilter
+  const totalAset = filteredPeriodData.reduce(
+    (acc: number, curr: Record<string, unknown>) =>
+      acc + (Number(curr.total_aset) || 0),
+    0,
+  );
+  const totalKredit = filteredPeriodData.reduce(
+    (acc: number, curr: Record<string, unknown>) =>
+      acc + (Number(curr.total_kredit) || 0),
+    0,
+  );
+  const totalDpk = filteredPeriodData.reduce(
+    (acc: number, curr: Record<string, unknown>) =>
+      acc + (Number(curr.dpk) || 0),
+    0,
+  );
 
-          const liveKpiList: KpiItem[] = [
-            {
-              title: "Total Aset",
-              value: `Rp ${totalAset.toLocaleString("id-ID")} Jt`,
-              status: "Meningkat",
-              type: "increase",
-              color: "#16a34a",
-              sparkline: getYearlyAvg("total_aset", true),
-            },
-            {
-              title: "Total Kredit",
-              value: `Rp ${totalKredit.toLocaleString("id-ID")} Jt`,
-              status: "Meningkat",
-              type: "increase",
-              color: "#16a34a",
-              sparkline: getYearlyAvg("total_kredit", true),
-            },
-            {
-              title: "DPK",
-              value: `Rp ${totalDpk.toLocaleString("id-ID")} Jt`,
-              status: "Meningkat",
-              type: "increase",
-              color: "#16a34a",
-              sparkline: getYearlyAvg("dpk", true),
-            },
-            {
-              title: "KPMM",
-              value: `${avgKpmm.toFixed(2)}%`,
-              status: "Stabil",
-              type: "stable",
-              color: "#2563eb",
-              sparkline: getYearlyAvg("kpmm"),
-            },
-            {
-              title: "NPL Gross",
-              value: `${avgNpl.toFixed(2)}%`,
-              status: avgNpl > 5 ? "Meningkat" : "Menurun",
-              type: avgNpl > 5 ? "increase" : "decrease",
-              color: "#dc2626",
-              sparkline: getYearlyAvg("npl"),
-            },
-            {
-              title: "Cadangan/PPKA",
-              value: `${avgPpka.toFixed(2)}%`,
-              status: "Meningkat",
-              type: "increase",
-              color: "#16a34a",
-              sparkline: getYearlyAvg("ppka"),
-            },
-            {
-              title: "ROA",
-              value: `${avgRoa.toFixed(2)}%`,
-              status: "Stabil",
-              type: "stable",
-              color: "#2563eb",
-              sparkline: getYearlyAvg("roa"),
-            },
-            {
-              title: "BOPO",
-              value: `${avgBopo.toFixed(2)}%`,
-              status: avgBopo > 90 ? "Meningkat" : "Menurun",
-              type: avgBopo > 90 ? "increase" : "decrease",
-              color: "#dc2626",
-              sparkline: getYearlyAvg("bopo"),
-            },
-            {
-              title: "NIM",
-              value: `${avgNim.toFixed(2)}%`,
-              status: "Meningkat",
-              type: "increase",
-              color: "#16a34a",
-              sparkline: getYearlyAvg("nim"),
-            },
-            {
-              title: "LDR",
-              value: `${avgLdr.toFixed(2)}%`,
-              status: "Stabil",
-              type: "stable",
-              color: "#2563eb",
-              sparkline: getYearlyAvg("ldr"),
-            },
-            {
-              title: "Cash Ratio",
-              value: `${avgCashRatio.toFixed(2)}%`,
-              status: "Meningkat",
-              type: "increase",
-              color: "#16a34a",
-              sparkline: getYearlyAvg("cash_ratio"),
-            },
-          ];
+  const getAvg = (key: string) =>
+    filteredPeriodData.length > 0
+      ? filteredPeriodData.reduce(
+          (acc: number, curr: Record<string, unknown>) =>
+            acc + (Number(curr[key]) || 0),
+          0,
+        ) / filteredPeriodData.length
+      : 0;
 
-          setKpiData(liveKpiList);
-        }
-      } catch (err) {
-        console.error("Kesalahan jaringan saat mengambil metrik KPI:", err);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const avgNpl = getAvg("npl");
+  const avgKklGross = getAvg("kkl_gross");
+  const avgMiapb = getAvg("miapb");
+  const avgRoa = getAvg("roa");
+  const avgBopo = getAvg("bopo");
+  const avgNim = getAvg("nim");
+  const avgLdr = getAvg("ldr");
+  const avgCashRatio = getAvg("cash_ratio");
+  const avgCar = getAvg("kpmm") || getAvg("car");
 
-    fetchKpiMetrics();
-  }, [s, e, yearsList]);
+  // Helper untuk sparkline historis tahunan pada bulan yang sama
+  const getYearlyAvg = (key: string, isTotal: boolean = false) => {
+    return yearsList.map((yr) => {
+      const yrRows = data.filter((row: Record<string, unknown>) => {
+        const matchYear = Number(row.tahun) === yr;
+        const matchBulan =
+          selectedBulan === 0 ? true : Number(row.bulan) === selectedBulan;
+        return matchYear && matchBulan;
+      });
+      if (yrRows.length === 0) return { v: 0 };
+      const sum = yrRows.reduce(
+        (acc: number, curr: Record<string, unknown>) =>
+          acc + (Number(curr[key]) || 0),
+        0,
+      );
+      const val = isTotal ? sum : sum / yrRows.length;
+      return { v: +val.toFixed(2) };
+    });
+  };
+
+  const kpiData: KpiItem[] = [
+    {
+      title: "1. Total Aset",
+      value: `Rp ${totalAset.toLocaleString("id-ID")} Jt`,
+      status: "Stabil",
+      type: "stable",
+      color: "#16a34a",
+      sparkline: getYearlyAvg("total_aset", true),
+    },
+    {
+      title: "2. Total Kredit",
+      value: `Rp ${totalKredit.toLocaleString("id-ID")} Jt`,
+      status: "Tumbuh",
+      type: "increase",
+      color: "#16a34a",
+      sparkline: getYearlyAvg("total_kredit", true),
+    },
+    {
+      title: "3. DPK",
+      value: `Rp ${totalDpk.toLocaleString("id-ID")} Jt`,
+      status: "Stabil",
+      type: "stable",
+      color: "#16a34a",
+      sparkline: getYearlyAvg("dpk", true),
+    },
+    {
+      title: "4. NPL Gross",
+      value: `${avgNpl.toFixed(2)}%`,
+      status: avgNpl > 5 ? "Perhatian (>5%)" : "Aman (≤5%)",
+      type: avgNpl > 5 ? "decrease" : "increase",
+      color: "#dc2626",
+      sparkline: getYearlyAvg("npl"),
+    },
+    {
+      title: "5. KKL Gross",
+      value: `${avgKklGross.toFixed(2)}%`,
+      status: "Early Warning",
+      type: "stable",
+      color: "#2563eb",
+      sparkline: getYearlyAvg("kkl_gross"),
+    },
+    {
+      title: "6. MIAPB",
+      value: `${avgMiapb.toFixed(2)}%`,
+      status: avgMiapb >= 200 ? "Sangat Baik" : "Normal",
+      type: "stable",
+      color: "#2563eb",
+      sparkline: getYearlyAvg("miapb"),
+    },
+    {
+      title: "7. ROA",
+      value: `${avgRoa.toFixed(2)}%`,
+      status: avgRoa >= 2 ? "Sangat Baik" : avgRoa < 0.5 ? "Kurang" : "Cukup",
+      type: avgRoa < 0.5 ? "decrease" : "increase",
+      color: "#2563eb",
+      sparkline: getYearlyAvg("roa"),
+    },
+    {
+      title: "8. BOPO",
+      value: `${avgBopo.toFixed(2)}%`,
+      status: avgBopo > 95 ? "Tidak Efisien" : "Efisien",
+      type: avgBopo > 95 ? "decrease" : "increase",
+      color: "#dc2626",
+      sparkline: getYearlyAvg("bopo"),
+    },
+    {
+      title: "9. NIM",
+      value: `${avgNim.toFixed(2)}%`,
+      status: avgNim >= 10 ? "Sangat Baik" : "Normal",
+      type: "increase",
+      color: "#16a34a",
+      sparkline: getYearlyAvg("nim"),
+    },
+    {
+      title: "10. LDR",
+      value: `${avgLdr.toFixed(2)}%`,
+      status: avgLdr > 100 ? "Tekanan Likuiditas" : "Terkendali",
+      type: avgLdr > 100 ? "decrease" : "stable",
+      color: "#2563eb",
+      sparkline: getYearlyAvg("ldr"),
+    },
+    {
+      title: "11. Cash Ratio",
+      value: `${avgCashRatio.toFixed(2)}%`,
+      status: avgCashRatio < 5 ? "Risiko (<5%)" : "Aman (≥5%)",
+      type: avgCashRatio < 5 ? "decrease" : "increase",
+      color: "#16a34a",
+      sparkline: getYearlyAvg("cash_ratio"),
+    },
+    {
+      title: "12. CAR/KPMM",
+      value: `${avgCar.toFixed(2)}%`,
+      status: avgCar < 12 ? "Perhatian (<12%)" : "Kuat (≥12%)",
+      type: avgCar < 12 ? "decrease" : "stable",
+      color: "#16a34a",
+      sparkline: getYearlyAvg("kpmm"),
+    },
+  ];
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4 select-none">
-      <div>
-        <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase">
-          11 Indikator Keuangan Portofolio BPR (Periode {s} — {e})
-        </h2>
-        <p className="text-xs text-slate-500 mt-0.5">
-          Parameter kesehatan makro dan volume usaha hasil agregasi data
-          langsung dari basis data lokal MySQL.
-        </p>
+      {/* Header & Filter Bulan + Tahun */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
+        <div>
+          <h2 className="text-xs font-bold text-slate-400 tracking-wider uppercase">
+            12 Indikator Keuangan Portofolio BPR (
+            {selectedBulan === 0
+              ? "Akumulasi 1 Tahun"
+              : namaBulanLengkap[selectedBulan]}{" "}
+            {activeYear})
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Parameter kesehatan makro dan volume usaha hasil agregasi data lokal
+            MySQL.
+          </p>
+        </div>
+
+        {/* Filter Dropdown Bulan & Tahun */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Filter Bulan */}
+          <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <span className="text-[11px] font-bold text-slate-500">Bulan:</span>
+            <select
+              value={selectedBulan}
+              onChange={(e) => setSelectedBulan(Number(e.target.value))}
+              className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              <option value={0}>Semua (1 Tahun)</option>
+              {namaBulanLengkap.slice(1).map((m, idx) => (
+                <option key={idx + 1} value={idx + 1}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Filter Tahun */}
+          <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+            <Calendar size={14} className="text-slate-400 shrink-0" />
+            <span className="text-[11px] font-bold text-slate-500">Tahun:</span>
+            <select
+              value={activeYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+            >
+              {yearsList.map((yr) => (
+                <option key={yr} value={yr}>
+                  {yr}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      {loading ? (
+      {data.length === 0 ? (
         <div className="py-12 text-center text-xs text-slate-400 font-medium">
           Menghitung parameter indikator dari server lokal...
         </div>

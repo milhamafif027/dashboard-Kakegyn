@@ -20,7 +20,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
-  // Menu navigasi dengan tambahan Detail Dokumen
+  // Menu navigasi utama
   const menuItems = [
     { name: "Dashboard Utama", href: "/", icon: LayoutDashboard },
     {
@@ -31,7 +31,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: "Perbandingan BPR", href: "/perbandingan", icon: BarChart2 },
     { name: "Detail BPR", href: "/detail-bpr", icon: Database },
     { name: "Laporan Pengawasan", href: "/laporan", icon: FileText },
-    { name: "Informasi Dokumen", href: "/dokumen", icon: FileText }, 
+    { name: "Informasi Dokumen", href: "/dokumen", icon: FileText },
   ];
 
   return (
@@ -44,9 +44,9 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         />
       )}
 
-      {/* Konten Sidebar dengan Z-Index Tinggi */}
+      {/* Konten Sidebar dengan Posisi Fixed di Mobile & Relative di Desktop */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-50 w-68 h-screen bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 border-r border-slate-800 shadow-2xl select-none transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 md:relative z-50 w-68 h-screen bg-slate-900 text-slate-300 flex flex-col justify-between shrink-0 border-r border-slate-800 shadow-2xl select-none transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
