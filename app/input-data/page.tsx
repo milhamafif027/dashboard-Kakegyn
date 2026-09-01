@@ -246,6 +246,10 @@ export default function InputDataPage() {
         const result = await res.json();
         if (result.success) {
           alert("Data berhasil dihapus!");
+
+          // SOLUSI: Perbarui state lokal secara instan agar baris langsung hilang dari UI tabel
+          setAllRecords((prev) => prev.filter((item) => item.id !== id));
+
           const refreshRes = await fetch(`${baseUrl}/api/bpr`);
           const refreshResult = await refreshRes.json();
           if (refreshResult.success && refreshResult.data) {
