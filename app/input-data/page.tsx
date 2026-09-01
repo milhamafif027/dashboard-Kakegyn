@@ -8,19 +8,45 @@ import {
   CheckCircle2,
   Calendar,
   Building2,
+  Trash2,
+  Filter,
 } from "lucide-react";
 
 interface BprExistingItem {
+  id: number;
   bpr_name: string;
   tahun: number;
   bulan: number;
+  status: string;
   [key: string]: unknown;
 }
 
+const namaBulanLengkap = [
+  "",
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
 export default function InputDataPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [allRecords, setAllRecords] = useState<BprExistingItem[]>([]);
   const [existingBprs, setExistingBprs] = useState<string[]>([]);
   const [isNewBpr, setIsNewBpr] = useState<boolean>(false);
+
+  // State untuk Filter Tabel Riwayat
+  const [filterBpr, setFilterBpr] = useState<string>("ALL");
+  const [filterTahun, setFilterTahun] = useState<string>("ALL");
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
 
   const [formData, setFormData] = useState({
     bpr_name: "",
@@ -31,7 +57,8 @@ export default function InputDataPage() {
     dpk: "",
     kpmm: "",
     npl: "",
-    ppka: "",
+    kkl_gross: "",
+    miapb: "",
     roa: "",
     bopo: "",
     nim: "",
@@ -43,26 +70,39 @@ export default function InputDataPage() {
   const [successMessage, setSuccessMessage] = useState("");
 
   useEffect(() => {
-    async function fetchBprNames() {
+    async function loadData() {
       try {
         const baseUrl =
           typeof window !== "undefined" ? window.location.origin : "";
         const res = await fetch(`${baseUrl}/api/bpr`);
         const result = await res.json();
         if (result.success && result.data) {
+          setAllRecords(result.data);
           const names: string[] = Array.from(
             new Set(result.data.map((item: BprExistingItem) => item.bpr_name)),
           );
           setExistingBprs(names);
           if (names.length > 0) {
-            setFormData((prev) => ({ ...prev, bpr_name: names[0] }));
+            setFormData((prev) => ({
+              ...prev,
+              bpr_name: prev.bpr_name || names[0],
+            }));
           }
+
+          // Ekstrak daftar tahun unik untuk filter dengan tipe aman
+          const years = Array.from(
+            new Set(
+              result.data.map((item: BprExistingItem) => Number(item.tahun)),
+            ),
+          ) as number[];
+          years.sort((a, b) => b - a);
+          setAvailableYears(years);
         }
       } catch (err) {
         console.error("Gagal memuat daftar BPR:", err);
       }
     }
-    fetchBprNames();
+    loadData();
   }, []);
 
   const handleChange = (
@@ -146,13 +186,36 @@ export default function InputDataPage() {
           dpk: "",
           kpmm: "",
           npl: "",
-          ppka: "",
+          kkl_gross: "",
+          miapb: "",
           roa: "",
           bopo: "",
           nim: "",
           ldr: "",
           cash_ratio: "",
         }));
+
+        // Refresh ulang data tabel riwayat
+        const refreshRes = await fetch(`${baseUrl}/api/bpr`);
+        const refreshResult = await refreshRes.json();
+        if (refreshResult.success && refreshResult.data) {
+          setAllRecords(refreshResult.data);
+          const names: string[] = Array.from(
+            new Set(
+              refreshResult.data.map((item: BprExistingItem) => item.bpr_name),
+            ),
+          );
+          setExistingBprs(names);
+          const years = Array.from(
+            new Set(
+              refreshResult.data.map((item: BprExistingItem) =>
+                Number(item.tahun),
+              ),
+            ),
+          ) as number[];
+          years.sort((a, b) => b - a);
+          setAvailableYears(years);
+        }
       } else {
         alert("Gagal menyimpan data: " + result.error);
       }
@@ -162,6 +225,65 @@ export default function InputDataPage() {
       setLoading(false);
     }
   };
+
+  const handleDelete = async (
+    id: number,
+    name: string,
+    bulan: number,
+    tahun: number,
+  ) => {
+    if (
+      confirm(
+        `Apakah Anda yakin ingin menghapus data ${name} periode ${namaBulanLengkap[bulan]} ${tahun}?`,
+      )
+    ) {
+      try {
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/bpr?id=${id}`, {
+          method: "DELETE",
+        });
+        const result = await res.json();
+        if (result.success) {
+          alert("Data berhasil dihapus!");
+          const refreshRes = await fetch(`${baseUrl}/api/bpr`);
+          const refreshResult = await refreshRes.json();
+          if (refreshResult.success && refreshResult.data) {
+            setAllRecords(refreshResult.data);
+            const names: string[] = Array.from(
+              new Set(
+                refreshResult.data.map(
+                  (item: BprExistingItem) => item.bpr_name,
+                ),
+              ),
+            );
+            setExistingBprs(names);
+            const years = Array.from(
+              new Set(
+                refreshResult.data.map((item: BprExistingItem) =>
+                  Number(item.tahun),
+                ),
+              ),
+            ) as number[];
+            years.sort((a, b) => b - a);
+            setAvailableYears(years);
+          }
+        } else {
+          alert("Gagal menghapus: " + result.error);
+        }
+      } catch (err) {
+        console.error("Kesalahan jaringan saat menghapus:", err);
+      }
+    }
+  };
+
+  // Logika Filter Data Rekaman
+  const filteredRecords = allRecords.filter((item) => {
+    const matchBpr = filterBpr === "ALL" || item.bpr_name === filterBpr;
+    const matchTahun =
+      filterTahun === "ALL" || Number(item.tahun) === Number(filterTahun);
+    return matchBpr && matchTahun;
+  });
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none relative">
@@ -334,7 +456,7 @@ export default function InputDataPage() {
 
             <div className="border-t border-slate-100 pt-4">
               <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-3">
-                11 Indikator Rasio Keuangan Utama (%)
+                Indikator Rasio Keuangan Utama (%)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
@@ -365,13 +487,26 @@ export default function InputDataPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-600 mb-1">
-                    Cadangan/PPKA (%)
+                    KKL Gross (%)
                   </label>
                   <input
                     type="number"
                     step="any"
-                    name="ppka"
-                    value={formData.ppka}
+                    name="kkl_gross"
+                    value={formData.kkl_gross}
+                    onChange={handleChange}
+                    className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
+                    MIAPB (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    name="miapb"
+                    value={formData.miapb}
                     onChange={handleChange}
                     className="w-full text-xs bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-bold text-slate-900"
                   />
@@ -457,6 +592,137 @@ export default function InputDataPage() {
               </button>
             </div>
           </form>
+
+          {/* Tabel Manajemen / Penghapusan Data dengan Filter */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
+                  Manajemen & Riwayat Data Tersimpan
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Gunakan filter di bawah untuk menyaring data riwayat sebelum
+                  menghapus.
+                </p>
+              </div>
+
+              {/* Area Filter */}
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                  <Filter size={13} className="text-slate-400" />
+                  <span className="text-[11px] font-bold text-slate-500">
+                    BPR:
+                  </span>
+                  <select
+                    value={filterBpr}
+                    onChange={(e) => setFilterBpr(e.target.value)}
+                    className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">Semua BPR</option>
+                    {existingBprs.map((b) => (
+                      <option key={b} value={b}>
+                        {b}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex items-center space-x-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                  <Calendar size={13} className="text-slate-400" />
+                  <span className="text-[11px] font-bold text-slate-500">
+                    Tahun:
+                  </span>
+                  <select
+                    value={filterTahun}
+                    onChange={(e) => setFilterTahun(e.target.value)}
+                    className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">Semua Tahun</option>
+                    {availableYears.map((yr) => (
+                      <option key={yr} value={yr}>
+                        {yr}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="w-full text-left text-xs border-collapse min-w-[600px]">
+                <thead>
+                  <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-200/80">
+                    <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]">
+                      Nama BPR
+                    </th>
+                    <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]">
+                      Tahun
+                    </th>
+                    <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]">
+                      Bulan
+                    </th>
+                    <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px]">
+                      Status
+                    </th>
+                    <th className="py-3 px-4 font-bold uppercase tracking-wider text-[11px] text-center w-28">
+                      Aksi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {filteredRecords.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center text-slate-400"
+                      >
+                        Tidak ada data laporan yang cocok dengan filter yang
+                        dipilih.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredRecords.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="hover:bg-slate-50/70 transition-colors"
+                      >
+                        <td className="py-3.5 px-4 font-bold text-slate-800">
+                          {item.bpr_name}
+                        </td>
+                        <td className="py-3.5 px-4">{item.tahun}</td>
+                        <td className="py-3.5 px-4">
+                          {namaBulanLengkap[Number(item.bulan)] || item.bulan}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleDelete(
+                                item.id,
+                                item.bpr_name,
+                                Number(item.bulan),
+                                Number(item.tahun),
+                              )
+                            }
+                            className="inline-flex items-center space-x-1 bg-red-50 hover:bg-red-100 text-red-600 px-3 py-1.5 rounded-xl font-bold transition-all text-xs border border-red-200 cursor-pointer"
+                            title="Hapus Data Ini"
+                          >
+                            <Trash2 size={13} />
+                            <span>Hapus</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </main>
       </div>
     </div>

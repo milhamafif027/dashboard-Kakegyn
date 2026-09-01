@@ -31,12 +31,14 @@ interface BprItem {
   dpk: number;
   kpmm: number;
   npl: number;
-  ppka: number;
+  kkl_gross: number;
+  miapb: number;
   roa: number;
   bopo: number;
   nim: number;
   ldr: number;
   cash_ratio: number;
+  car?: number;
   dominant_trend: string;
   [key: string]: unknown;
 }
@@ -62,18 +64,18 @@ export default function LaporanPage() {
   const [bprNames, setBprNames] = useState<string[]>([]);
   const [selectedBpr, setSelectedBpr] = useState<string>("");
 
-  // State tahun dinamis dari database dan tahun terpilih
   const [availableYears, setAvailableYears] = useState<number[]>([2026]);
   const [selectedYear, setSelectedYear] = useState<number>(2026);
 
   const [allBprData, setAllBprData] = useState<BprItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // 1. Ambil daftar BPR dan tahun unik dari API secara dinamis
   useEffect(() => {
     async function fetchBprList() {
       try {
-        const res = await fetch("/api/bpr");
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/bpr`);
         const result = await res.json();
         if (result.success && result.data) {
           const names: string[] = Array.from(
@@ -82,7 +84,6 @@ export default function LaporanPage() {
           setBprNames(names);
           if (names.length > 0) setSelectedBpr(names[0]);
 
-          // Ekstrak daftar tahun unik secara dinamis
           const yearsSet = new Set<number>();
           result.data.forEach((item: { tahun: unknown }) => {
             const y = Number(item.tahun);
@@ -105,14 +106,15 @@ export default function LaporanPage() {
     fetchBprList();
   }, []);
 
-  // 2. Ambil data spesifik BPR
   useEffect(() => {
     async function fetchBprReport() {
       if (!selectedBpr) return;
       setLoading(true);
       try {
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
         const res = await fetch(
-          `/api/bpr?bpr_name=${encodeURIComponent(selectedBpr)}`,
+          `${baseUrl}/api/bpr?bpr_name=${encodeURIComponent(selectedBpr)}`,
         );
         const result = await res.json();
         if (result.success && result.data) {
@@ -133,7 +135,6 @@ export default function LaporanPage() {
     fetchBprReport();
   }, [selectedBpr]);
 
-  // Data bulanan penuh 12 bulan untuk tahun yang dipilih
   const currentYearMonthlyData = Array.from({ length: 12 }, (_, index) => {
     const bulanNum = index + 1;
     const found = allBprData.find(
@@ -147,12 +148,15 @@ export default function LaporanPage() {
       total_aset: found ? Number(found.total_aset) || 0 : 0,
       total_kredit: found ? Number(found.total_kredit) || 0 : 0,
       dpk: found ? Number(found.dpk) || 0 : 0,
-      kpmm: found ? Number(found.kpmm) || 0 : 0,
+      kpmm: found ? Number(found.kpmm ?? found.car ?? 0) || 0 : 0,
       npl: found ? Number(found.npl) || 0 : 0,
+      kkl_gross: found ? Number(found.kkl_gross) || 0 : 0,
+      miapb: found ? Number(found.miapb) || 0 : 0,
       roa: found ? Number(found.roa) || 0 : 0,
       bopo: found ? Number(found.bopo) || 0 : 0,
       nim: found ? Number(found.nim) || 0 : 0,
       ldr: found ? Number(found.ldr) || 0 : 0,
+      cash_ratio: found ? Number(found.cash_ratio) || 0 : 0,
       dominant_trend: found
         ? String(found.dominant_trend || "Stabil")
         : "Stabil",
@@ -207,7 +211,7 @@ export default function LaporanPage() {
       <div className="flex-1 flex flex-col h-screen overflow-y-auto min-w-0">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
 
-        <main className="p-4 md:p-6 space-y-6 max-w-4xl mx-auto w-full">
+        <main className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto w-full">
           {/* Kontrol Navigasi & Filter */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 print:hidden">
             <div className="flex items-center space-x-3.5">
@@ -270,7 +274,7 @@ export default function LaporanPage() {
             </div>
           </div>
 
-          {/* KERTAS LAPORAN TANPA KOP */}
+          {/* KERTAS LAPORAN */}
           <div
             id="printable-report"
             className="bg-white p-8 sm:p-14 rounded-2xl border border-slate-200/90 shadow-sm space-y-6 text-xs text-slate-900 leading-relaxed font-sans"
@@ -281,28 +285,24 @@ export default function LaporanPage() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* JUDUL / PEMBUKA LANGSUNG */}
-                <div className="border-b border-slate-200 pb-3">
-                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Laporan Hasil Analisis Kinerja Keuangan
+                {/* HEADER: Tren & Analis BPR */}
+                <div className="border-b border-slate-200 pb-3 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2">
+                  <div>
+                    <div className="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                      Tren & Analis BPR
+                    </div>
+                    <h1 className="text-base font-black text-slate-900 mt-0.5">
+                      Entitas: {selectedBpr || "BPR Terlapor"} (Tahun{" "}
+                      {selectedYear})
+                    </h1>
                   </div>
-                  <h1 className="text-base font-black text-slate-900 mt-0.5">
-                    Entitas: {selectedBpr || "BPR Terlapor"} (Tahun{" "}
-                    {selectedYear})
-                  </h1>
+                  <div className="text-[11px] font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">
+                    Periode: Tahun Anggaran {selectedYear}
+                  </div>
                 </div>
 
                 {/* ISI LAPORAN */}
-                <div className="space-y-4 text-justify text-slate-700">
-                  <p>
-                    Dengan hormat, sehubungan dengan pelaksanaan evaluasi
-                    berkala terhadap tingkat kesehatan bank perekonomian rakyat,
-                    berikut disampaikan rekapitulasi perkembangan kinerja
-                    keuangan dan parameter pengawasan secara bulanan untuk
-                    entitas <strong>{selectedBpr}</strong> sepanjang periode
-                    tahun anggaran <strong>{selectedYear}</strong>.
-                  </p>
-
+                <div className="space-y-6 text-slate-700">
                   {/* Ringkasan Parameter */}
                   <div className="space-y-2 pt-1">
                     <div className="font-bold text-slate-900 text-xs">
@@ -470,44 +470,71 @@ export default function LaporanPage() {
                     </div>
                   </div>
 
-                  {/* Tabel Rekapitulasi Per Bulan (1 Tahun Penuh) */}
+                  {/* Tabel Rekapitulasi Per Bulan TANPA PPKA */}
                   <div className="space-y-2 pt-2">
                     <div className="font-bold text-slate-900 text-xs">
                       3. Matriks Rekapitulasi Bulanan Tahun {selectedYear}
                     </div>
                     <div className="overflow-x-auto rounded-xl border border-slate-200">
-                      <table className="w-full text-center text-[11px] border-collapse whitespace-nowrap">
+                      <table className="w-full text-center text-[10px] border-collapse whitespace-nowrap">
                         <thead>
                           <tr className="bg-slate-900 text-white">
-                            <th className="py-2.5 px-3 text-left">Bulan</th>
-                            <th className="py-2.5 px-2">KPMM (%)</th>
-                            <th className="py-2.5 px-2">NPL (%)</th>
-                            <th className="py-2.5 px-2">ROA (%)</th>
-                            <th className="py-2.5 px-2">BOPO (%)</th>
-                            <th className="py-2.5 px-2">NIM (%)</th>
-                            <th className="py-2.5 px-2">LDR (%)</th>
-                            <th className="py-2.5 px-3 text-right">Trend</th>
+                            <th className="py-2.5 px-2 text-left sticky left-0 bg-slate-900 z-10">
+                              Bulan
+                            </th>
+                            <th className="py-2.5 px-2">Aset (Jt)</th>
+                            <th className="py-2.5 px-2">Kredit (Jt)</th>
+                            <th className="py-2.5 px-2">DPK (Jt)</th>
+                            <th className="py-2.5 px-2">KPMM(%)</th>
+                            <th className="py-2.5 px-2">NPL(%)</th>
+                            <th className="py-2.5 px-2">KKL(%)</th>
+                            <th className="py-2.5 px-2">MIAPB(%)</th>
+                            <th className="py-2.5 px-2">ROA(%)</th>
+                            <th className="py-2.5 px-2">BOPO(%)</th>
+                            <th className="py-2.5 px-2">NIM(%)</th>
+                            <th className="py-2.5 px-2">LDR(%)</th>
+                            <th className="py-2.5 px-2">CashR(%)</th>
+                            <th className="py-2.5 px-2 text-right">Trend</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
                           {currentYearMonthlyData.map((row) => (
                             <tr key={row.bulan} className="hover:bg-slate-50">
-                              <td className="py-2 px-3 text-left font-bold text-slate-900">
+                              <td className="py-2 px-2 text-left font-bold text-slate-900 sticky left-0 bg-white z-10">
                                 {row.bulanLabel}
                               </td>
                               <td className="py-2 px-2">
+                                {row.total_aset
+                                  ? row.total_aset.toLocaleString("id-ID")
+                                  : 0}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.total_kredit
+                                  ? row.total_kredit.toLocaleString("id-ID")
+                                  : 0}
+                              </td>
+                              <td className="py-2 px-2">
+                                {row.dpk ? row.dpk.toLocaleString("id-ID") : 0}
+                              </td>
+                              <td className="py-2 px-2 font-bold text-blue-600">
                                 {Number(row.kpmm || 0).toFixed(2)}
                               </td>
                               <td
-                                className={`py-2 px-2 font-bold ${Number(row.npl || 0) > 5 ? "text-red-600" : "text-slate-800"}`}
+                                className={`py-2 px-2 font-bold ${Number(row.npl || 0) > 5 ? "text-red-600 bg-red-50" : "text-slate-800"}`}
                               >
                                 {Number(row.npl || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2 px-2">
+                                {Number(row.kkl_gross || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2 px-2">
+                                {Number(row.miapb || 0).toFixed(2)}
                               </td>
                               <td className="py-2 px-2">
                                 {Number(row.roa || 0).toFixed(2)}
                               </td>
                               <td
-                                className={`py-2 px-2 font-bold ${Number(row.bopo || 0) > 95 ? "text-red-600" : "text-slate-800"}`}
+                                className={`py-2 px-2 font-bold ${Number(row.bopo || 0) > 95 ? "text-red-600 bg-red-50" : "text-slate-800"}`}
                               >
                                 {Number(row.bopo || 0).toFixed(2)}
                               </td>
@@ -517,7 +544,10 @@ export default function LaporanPage() {
                               <td className="py-2 px-2">
                                 {Number(row.ldr || 0).toFixed(2)}
                               </td>
-                              <td className="py-2 px-3 text-right uppercase font-bold text-[10px]">
+                              <td className="py-2 px-2">
+                                {Number(row.cash_ratio || 0).toFixed(2)}
+                              </td>
+                              <td className="py-2 px-2 text-right uppercase font-bold text-[9px]">
                                 {row.dominant_trend}
                               </td>
                             </tr>
@@ -527,15 +557,15 @@ export default function LaporanPage() {
                     </div>
                   </div>
 
-                  {/* Penutup */}
-                  <p className="pt-3">
-                    Demikian laporan evaluasi bulanan ini disusun untuk
-                    dipergunakan sebagaimana mestinya dalam rangka pengawasan
-                    dan pembinaan berkelanjutan.
-                  </p>
-                  <div className="pt-4 text-right space-y-1">
-                    <div>Jakarta, {currentDate}</div>
-                    <div className="font-bold pt-8">Tim Pengawas BPR</div>
+                  {/* Penutup Ringkas */}
+                  <div className="pt-4 flex justify-between items-center border-t border-slate-100 text-[11px] text-slate-500">
+                    <div>Dokumen Analisis Otomatis Sistem Pengawasan BPR</div>
+                    <div className="text-right">
+                      <div>Jakarta, {currentDate}</div>
+                      <div className="font-bold text-slate-800 pt-4">
+                        Tim Pengawas BPR
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

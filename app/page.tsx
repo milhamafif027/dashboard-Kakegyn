@@ -6,7 +6,6 @@ import KpiGrid from "./components/KpiGrid";
 import SummaryTable from "./components/SummaryTable";
 import TrendCharts from "./components/TrendCharts";
 import ReviewPriority from "./components/ReviewPriority";
-import EvaluationCard from "./components/EvaluationCard";
 import { Database } from "lucide-react";
 
 interface BprSummaryItem {
@@ -33,7 +32,9 @@ export default function DashboardPage() {
     async function fetchDashboardData() {
       setLoading(true);
       try {
-        const res = await fetch(`/api/bpr`);
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/bpr`);
         const result = await res.json();
         const data = result.data;
 
@@ -170,12 +171,9 @@ export default function DashboardPage() {
             data={rawApiData}
           />
 
-          {/* Grid Evaluasi & Prioritas Review */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          {/* Komponen Review Priority (Card Evaluasi dihapus sesuai permintaan) */}
+          <div>
             <ReviewPriority />
-
-            {/* Komponen Evaluasi Terpisah yang Dinamis Berbasis Data */}
-            <EvaluationCard bprList={bprList} rawApiData={rawApiData} />
           </div>
         </main>
       </div>

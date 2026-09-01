@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/app/lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+// Inisialisasi klien Supabase menggunakan env variables
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 function evaluateBprStatus(row: Record<string, unknown>) {
   const npl = Number(row.npl) || 0;
@@ -42,7 +47,7 @@ export async function GET(request: Request) {
       query = query.eq("bulan", Number(bulan));
     }
     if (bprName) {
-      query = query.eq("bpr_name", decodeURIComponent(bprName));
+      query = query.eq("bpr_name", bprName);
     }
 
     query = query
@@ -57,7 +62,6 @@ export async function GET(request: Request) {
     }
 
     const dataRows = (data || []) as Record<string, unknown>[];
-
     const processedData = dataRows.map((row) => {
       const evaluation = evaluateBprStatus(row);
       return {
@@ -91,7 +95,6 @@ export async function POST(request: Request) {
       npl,
       kkl_gross,
       miapb,
-      ppka,
       roa,
       bopo,
       nim,
@@ -107,37 +110,51 @@ export async function POST(request: Request) {
       );
     }
 
+    const sanitizedTotalAset = Math.max(0, Number(total_aset) || 0);
+    const sanitizedTotalKredit = Math.max(0, Number(total_kredit) || 0);
+    const sanitizedDpk = Math.max(0, Number(dpk) || 0);
+    const sanitizedKpmm = Number(kpmm) || 0;
+    const sanitizedNpl = Math.max(0, Number(npl) || 0);
+    const sanitizedKklGross = Math.max(0, Number(kkl_gross) || 0);
+    const sanitizedMiapb = Math.max(0, Number(miapb) || 0);
+    const sanitizedRoa = Number(roa) || 0;
+    const sanitizedBopo = Math.max(0, Number(bopo) || 0);
+    const sanitizedNim = Number(nim) || 0;
+    const sanitizedLdr = Math.max(0, Number(ldr) || 0);
+    const sanitizedCashRatio = Math.max(0, Number(cash_ratio) || 0);
+    const sanitizedCar = Number(car) || Number(kpmm) || 0;
+
     const evaluated = evaluateBprStatus({
-      npl: Number(npl) || 0,
-      bopo: Number(bopo) || 0,
-      kpmm: Number(kpmm) || 0,
-      car: Number(car) || 0,
+      npl: sanitizedNpl,
+      bopo: sanitizedBopo,
+      kpmm: sanitizedKpmm,
+      car: sanitizedCar,
     });
 
-    const payload = {
-      bpr_name: String(bpr_name).trim(),
+    const insertPayload = {
+      bpr_name,
       tahun: Number(tahun),
       bulan: Number(bulan),
-      total_aset: Number(total_aset) || 0,
-      total_kredit: Number(total_kredit) || 0,
-      dpk: Number(dpk) || 0,
-      kpmm: Number(kpmm) || 0,
-      npl: Number(npl) || 0,
-      kkl_gross: Number(kkl_gross) || 0,
-      miapb: Number(miapb) || 0,
-      ppka: Number(ppka) || 0,
-      roa: Number(roa) || 0,
-      bopo: Number(bopo) || 0,
-      nim: Number(nim) || 0,
-      ldr: Number(ldr) || 0,
-      cash_ratio: Number(cash_ratio) || 0,
-      car: Number(car) || Number(kpmm) || 0,
+      total_aset: sanitizedTotalAset,
+      total_kredit: sanitizedTotalKredit,
+      dpk: sanitizedDpk,
+      kpmm: sanitizedKpmm,
+      npl: sanitizedNpl,
+      kkl_gross: sanitizedKklGross,
+      miapb: sanitizedMiapb,
+      roa: sanitizedRoa,
+      bopo: sanitizedBopo,
+      nim: sanitizedNim,
+      ldr: sanitizedLdr,
+      cash_ratio: sanitizedCashRatio,
+      car: sanitizedCar,
       status: evaluated.status,
       dominant_trend: evaluated.dominant_trend,
     };
 
-    // Murni menggunakan insert tanpa aturan upsert/onConflict
-    const { error } = await supabase.from("bpr_indicators").insert([payload]);
+    const { error } = await supabase
+      .from("bpr_indicators")
+      .insert([insertPayload]);
 
     if (error) {
       throw error;
@@ -145,10 +162,63 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: "Data indikator bulanan berhasil disimpan!",
+      message: "Data indikator bulanan berhasil disimpan ke Supabase!",
     });
   } catch (error: unknown) {
     console.error("DETAIL ERROR SUPABASE POST:", error);
+    return NextResponse.json(
+      { success: false, error: String(error) },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const bprName = searchParams.get("bpr_name");
+    const tahun = searchParams.get("tahun");
+    const bulan = searchParams.get("bulan");
+
+    if (id) {
+      const { error } = await supabase
+        .from("bpr_indicators")
+        .delete()
+        .eq("id", Number(id));
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        message: `Data dengan ID ${id} berhasil dihapus.`,
+      });
+    }
+
+    if (bprName && tahun && bulan) {
+      const { error } = await supabase
+        .from("bpr_indicators")
+        .delete()
+        .eq("bpr_name", bprName)
+        .eq("tahun", Number(tahun))
+        .eq("bulan", Number(bulan));
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        message: `Data ${bprName} periode ${bulan}/${tahun} berhasil dihapus.`,
+      });
+    }
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Parameter penghapusan tidak lengkap!",
+      },
+      { status: 400 },
+    );
+  } catch (error: unknown) {
+    console.error("DETAIL ERROR SUPABASE DELETE:", error);
     return NextResponse.json(
       { success: false, error: String(error) },
       { status: 500 },

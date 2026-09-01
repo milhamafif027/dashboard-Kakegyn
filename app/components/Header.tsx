@@ -29,7 +29,7 @@ export default function Header({ onOpenSidebar, periodeLabel }: HeaderProps) {
               </span>
             </div>
             <h1 className="text-sm sm:text-lg font-extrabold text-slate-800 tracking-tight mt-0.5">
-              Analisis & Evaluasi Keuangan BPR
+              Tren dan Analisis Keuangan BPR 
             </h1>
           </div>
         </div>

@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
+import { Activity, AlertTriangle, Search } from "lucide-react";
 
 interface ReviewItem {
   id: string;
   rank: number;
   name: string;
-  status: "HIGH ATTENTION" | "WATCH" | "STABLE";
+  status: "PERLU PERHATIAN" | "ANALISIS LEBIH LANJUT" | "BAIK";
+  rawStatus: string;
   mainIndication: string;
 }
 
@@ -16,23 +18,33 @@ export default function ReviewPriority() {
   useEffect(() => {
     async function fetchReviewData() {
       try {
-        // Ambil data periode terbaru (2025) dari API lokal MySQL
-        const res = await fetch("/api/bpr?tahun=2025");
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/bpr?tahun=2025`);
         const result = await res.json();
         const data = result.data;
 
         if (result.error) {
           console.error("Gagal memuat data prioritas review:", result.error);
         } else if (data) {
-          // Petakan data dari database ke format tampilan
           const mapped: ReviewItem[] = data.map(
             (row: Record<string, unknown>) => {
               const name = row.bpr_name as string;
-              const status =
-                (row.status as "HIGH ATTENTION" | "WATCH" | "STABLE") ||
-                "STABLE";
+              const originalStatus = (row.status as string) || "STABLE";
 
-              // Tentukan indikasi utama berdasarkan tren/status
+              // Pemetaan terjemahan status sesuai permintaan
+              let mappedStatus:
+                | "PERLU PERHATIAN"
+                | "ANALISIS LEBIH LANJUT"
+                | "BAIK" = "BAIK";
+              if (originalStatus === "HIGH ATTENTION") {
+                mappedStatus = "PERLU PERHATIAN";
+              } else if (originalStatus === "WATCH") {
+                mappedStatus = "ANALISIS LEBIH LANJUT";
+              } else {
+                mappedStatus = "BAIK";
+              }
+
               let indication = "Kinerja keuangan stabil dan sehat";
               if (name === "BPR Angga")
                 indication = "NPL meningkat, ROA turun, BOPO naik";
@@ -45,22 +57,21 @@ export default function ReviewPriority() {
               else if (name === "BPR Expres")
                 indication = "Kinerja keuangan ekspansif dan sehat";
 
-              // Berikan peringkat prioritas
               let rank = 3;
-              if (status === "HIGH ATTENTION") rank = 1;
-              else if (status === "WATCH") rank = 2;
+              if (originalStatus === "HIGH ATTENTION") rank = 1;
+              else if (originalStatus === "WATCH") rank = 2;
 
               return {
                 id: name,
                 rank,
                 name,
-                status,
+                status: mappedStatus,
+                rawStatus: originalStatus,
                 mainIndication: indication,
               };
             },
           );
 
-          // Urutkan berdasarkan peringkat (1 ke atas)
           mapped.sort((a, b) => a.rank - b.rank);
           setBprList(mapped);
         }
@@ -136,9 +147,9 @@ export default function ReviewPriority() {
                     <td className="py-3 px-3 whitespace-nowrap">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                          bpr.status === "HIGH ATTENTION"
+                          bpr.rawStatus === "HIGH ATTENTION"
                             ? "bg-red-100 text-red-700 border border-red-200"
-                            : bpr.status === "WATCH"
+                            : bpr.rawStatus === "WATCH"
                               ? "bg-amber-100 text-amber-700 border border-amber-200"
                               : "bg-emerald-100 text-emerald-700 border border-emerald-200"
                         }`}
@@ -157,14 +168,14 @@ export default function ReviewPriority() {
         </div>
       </div>
 
-      {/* Keterangan Status Legend */}
+      {/* Keterangan Status Legend yang Disesuaikan */}
       <div className="mt-2 pt-4 border-t border-slate-100 text-[11px] space-y-1.5">
         <div className="font-extrabold text-slate-700 uppercase tracking-wider mb-2">
           Keterangan Status
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
           <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide self-start">
-            HIGH ATTENTION
+            Perlu Perhatian
           </span>
           <span className="text-slate-500 font-medium">
             Terdapat $\ge 5$ indikator memburuk secara signifikan
@@ -172,7 +183,7 @@ export default function ReviewPriority() {
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
           <span className="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide self-start">
-            WATCH
+            Analisis Lebih Lanjut
           </span>
           <span className="text-slate-500 font-medium">
             Terdapat $3 - 4$ indikator yang perlu dipantau
@@ -180,7 +191,7 @@ export default function ReviewPriority() {
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
           <span className="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide self-start">
-            STABLE
+            Baik
           </span>
           <span className="text-slate-500 font-medium">
             Mayoritas indikator membaik atau stabil
@@ -190,3 +201,4 @@ export default function ReviewPriority() {
     </div>
   );
 }
+  

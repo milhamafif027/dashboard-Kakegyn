@@ -6,7 +6,8 @@ interface ReviewItem {
   id: string;
   rank: number;
   name: string;
-  status: "HIGH ATTENTION" | "WATCH" | "STABLE" | "WARNING";
+  statusText: "PERLU PERHATIAN" | "ANALISIS LEBIH LANJUT" | "BAIK";
+  rawStatus: string;
   mainIndication: string;
   npl: number;
   bopo: number;
@@ -33,17 +34,18 @@ export default function ReviewPriority() {
   const [bprList, setBprList] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // State untuk filter tahun dan bulan laporan
   const [selectedYear, setSelectedYear] = useState<number>(2025);
-  const [selectedBulan, setSelectedBulan] = useState<number>(12); // Default Desember
+  const [selectedBulan, setSelectedBulan] = useState<number>(12);
   const availableYears = [2021, 2022, 2023, 2024, 2025];
 
   useEffect(() => {
     async function fetchReviewData() {
       setLoading(true);
       try {
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
         const res = await fetch(
-          `/api/bpr?tahun=${selectedYear}&bulan=${selectedBulan}`,
+          `${baseUrl}/api/bpr?tahun=${selectedYear}&bulan=${selectedBulan}`,
         );
         const result = await res.json();
         const data = result.data;
@@ -51,7 +53,6 @@ export default function ReviewPriority() {
         if (result.error) {
           console.error("Gagal memuat data prioritas review:", result.error);
         } else if (data) {
-          // Pastikan hanya mengambil 1 baris per BPR (unik berdasarkan nama)
           const uniqueBprRows = data.filter(
             (
               item: Record<string, unknown>,
@@ -63,12 +64,27 @@ export default function ReviewPriority() {
           const mapped: ReviewItem[] = uniqueBprRows.map(
             (row: Record<string, unknown>) => {
               const name = row.bpr_name as string;
-              const status = (row.status as ReviewItem["status"]) || "STABLE";
+              const originalStatus = (row.status as string) || "STABLE";
               const npl = Number(row.npl) || 0;
               const roa = Number(row.roa) || 0;
               const bopo = Number(row.bopo) || 0;
 
-              // Tentukan indikasi utama yang lebih dinamis berdasarkan data asli
+              let mappedStatus:
+                | "PERLU PERHATIAN"
+                | "ANALISIS LEBIH LANJUT"
+                | "BAIK" = "BAIK";
+              if (
+                originalStatus === "HIGH ATTENTION" ||
+                originalStatus === "WARNING" ||
+                npl > 5
+              ) {
+                mappedStatus = "PERLU PERHATIAN";
+              } else if (originalStatus === "WATCH" || npl > 3.5) {
+                mappedStatus = "ANALISIS LEBIH LANJUT";
+              } else {
+                mappedStatus = "BAIK";
+              }
+
               let indication = "Kinerja keuangan stabil dan sehat";
               if (npl > 4.5 || bopo > 88) {
                 indication = `NPL ${npl.toFixed(2)}%, BOPO ${bopo.toFixed(2)}% (Perlu Atensi)`;
@@ -78,21 +94,16 @@ export default function ReviewPriority() {
                 indication = "Pertumbuhan volume usaha dan likuiditas terjaga";
               }
 
-              // Tentukan peringkat prioritas review pengawasan
               let rank = 3;
-              if (
-                status === "HIGH ATTENTION" ||
-                status === "WARNING" ||
-                npl > 5
-              )
-                rank = 1;
-              else if (status === "WATCH" || npl > 3.5) rank = 2;
+              if (mappedStatus === "PERLU PERHATIAN") rank = 1;
+              else if (mappedStatus === "ANALISIS LEBIH LANJUT") rank = 2;
 
               return {
                 id: name,
                 rank,
                 name,
-                status,
+                statusText: mappedStatus,
+                rawStatus: originalStatus,
                 mainIndication: indication,
                 npl,
                 bopo,
@@ -101,7 +112,6 @@ export default function ReviewPriority() {
             },
           );
 
-          // Urutkan berdasarkan peringkat (1 = prioritas utama pengawasan)
           mapped.sort((a, b) => a.rank - b.rank);
           setBprList(mapped);
         }
@@ -226,16 +236,15 @@ export default function ReviewPriority() {
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
-                          bpr.status === "HIGH ATTENTION" ||
-                          bpr.status === "WARNING"
+                        className={`inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wide ${
+                          bpr.statusText === "PERLU PERHATIAN"
                             ? "bg-red-100 text-red-700 border border-red-200"
-                            : bpr.status === "WATCH"
+                            : bpr.statusText === "ANALISIS LEBIH LANJUT"
                               ? "bg-amber-100 text-amber-700 border border-amber-200"
                               : "bg-emerald-100 text-emerald-700 border border-emerald-200"
                         }`}
                       >
-                        {bpr.status}
+                        {bpr.statusText}
                       </span>
                     </td>
                     <td className="py-3 px-3 text-slate-600">
@@ -255,8 +264,8 @@ export default function ReviewPriority() {
           Keterangan Status Pengawasan
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-          <span className="bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide self-start">
-            HIGH ATTENTION
+          <span className="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-[9px] uppercase tracking-wider self-start">
+            PERLU PERHATIAN
           </span>
           <span className="text-slate-500 font-medium">
             Parameter risiko kredit (NPL) atau efisiensi (BOPO) memerlukan
@@ -264,8 +273,8 @@ export default function ReviewPriority() {
           </span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-          <span className="bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide self-start">
-            WATCH
+          <span className="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded-full text-[9px] uppercase tracking-wider self-start">
+            ANALISIS LEBIH LANJUT
           </span>
           <span className="text-slate-500 font-medium">
             Terdapat fluktuasi indikator keuangan yang perlu dipantau secara
@@ -273,8 +282,8 @@ export default function ReviewPriority() {
           </span>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center space-y-1 sm:space-y-0 sm:space-x-2">
-          <span className="bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full text-[9px] uppercase tracking-wide self-start">
-            STABLE
+          <span className="bg-emerald-100 text-emerald-700 font-bold px-3 py-1 rounded-full text-[9px] uppercase tracking-wider self-start">
+            BAIK
           </span>
           <span className="text-slate-500 font-medium">
             Kinerja keuangan berada dalam batas normal dan sehat

@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import EvaluationCard from "../components/EvaluationCard";
 import {
   Database,
   Building2,
@@ -32,7 +33,6 @@ interface BprDetailRecord {
   npl: number;
   kkl_gross: number;
   miapb: number;
-  ppka: number;
   roa: number;
   bopo: number;
   nim: number;
@@ -64,26 +64,27 @@ export default function DetailBPRPage() {
   const [bprList, setBprList] = useState<string[]>([]);
   const [selectedBpr, setSelectedBpr] = useState<string>("BPR Angga");
 
-  // State daftar tahun dinamis dari database dan rentang fallback
   const [availableYears, setAvailableYears] = useState<number[]>([2026]);
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedBulan, setSelectedBulan] = useState<number>(1);
 
   const [bprRecords, setBprRecords] = useState<BprDetailRecord[]>([]);
+  const [allRawData, setAllRawData] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 1. Ambil daftar nama BPR dan daftar tahun unik dari database MySQL
   useEffect(() => {
     async function fetchMetaData() {
       try {
-        const res = await fetch("/api/bpr");
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/bpr`);
         const result = await res.json();
         const data = result.data;
 
         if (result.error) {
           console.error("Gagal memuat data dari database:", result.error);
         } else if (data) {
-          // Ekstrak nama BPR unik
+          setAllRawData(data);
           const uniqueNames = Array.from(
             new Set(
               data.map(
@@ -96,7 +97,6 @@ export default function DetailBPRPage() {
             setSelectedBpr(uniqueNames[0]);
           }
 
-          // Ekstrak tahun unik secara dinamis
           const yearsSet = new Set<number>();
           data.forEach((item: { tahun: unknown }) => {
             const y = Number(item.tahun);
@@ -119,13 +119,14 @@ export default function DetailBPRPage() {
     fetchMetaData();
   }, []);
 
-  // 2. Ambil data historis untuk BPR yang sedang dipilih
   useEffect(() => {
     async function fetchBprDetails() {
       setLoading(true);
       try {
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
         const res = await fetch(
-          `/api/bpr?bpr_name=${encodeURIComponent(selectedBpr)}`,
+          `${baseUrl}/api/bpr?bpr_name=${encodeURIComponent(selectedBpr)}`,
         );
         const result = await res.json();
         const data = result.data;
@@ -155,7 +156,6 @@ export default function DetailBPRPage() {
     }
   }, [selectedBpr]);
 
-  // Ambil data pembanding awal (record pertama) dan data akhir berdasarkan bulan & tahun yang dipilih
   const recordAwal = bprRecords[0];
   const recordAkhir =
     bprRecords.find(
@@ -163,7 +163,24 @@ export default function DetailBPRPage() {
         Number(r.tahun) === selectedYear && Number(r.bulan) === selectedBulan,
     ) || bprRecords[bprRecords.length - 1];
 
-  const currentStatus = recordAkhir?.status || "STABLE";
+  const rawStatus = recordAkhir?.status || "STABLE";
+  const nplVal = Number(recordAkhir?.npl || 0);
+
+  // Pemetaan label status baru yang konsisten
+  let currentStatus: "PERLU PERHATIAN" | "ANALISIS LEBIH LANJUT" | "BAIK" =
+    "BAIK";
+  if (
+    rawStatus === "HIGH ATTENTION" ||
+    rawStatus === "WARNING" ||
+    nplVal > 5.0
+  ) {
+    currentStatus = "PERLU PERHATIAN";
+  } else if (rawStatus === "WATCH" || nplVal > 3.5) {
+    currentStatus = "ANALISIS LEBIH LANJUT";
+  } else {
+    currentStatus = "BAIK";
+  }
+
   const currentTrend = recordAkhir?.dominant_trend || "Stabil";
 
   const rankMap: Record<string, number> = {
@@ -190,10 +207,14 @@ export default function DetailBPRPage() {
     mainIndication =
       "Permodalan (CAR) sangat kuat dan likuiditas sangat sehat.";
 
-  // Filter data untuk grafik tren BPR aktif pada tahun yang dipilih
   const chartDataYear = bprRecords.filter(
     (r) => Number(r.tahun) === selectedYear,
   );
+
+  const evaluationBprList = bprList.map((name, idx) => ({
+    id: String(idx + 1),
+    name: name,
+  }));
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
@@ -322,16 +343,14 @@ export default function DetailBPRPage() {
                 <div className="mt-2.5">
                   <span
                     className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-xl text-xs font-extrabold tracking-wide ${
-                      currentStatus === "HIGH ATTENTION" ||
-                      currentStatus === "WARNING"
+                      currentStatus === "PERLU PERHATIAN"
                         ? "bg-red-100 text-red-700 border border-red-200"
-                        : currentStatus === "WATCH"
+                        : currentStatus === "ANALISIS LEBIH LANJUT"
                           ? "bg-amber-100 text-amber-700 border border-amber-200"
                           : "bg-emerald-100 text-emerald-700 border border-emerald-200"
                     }`}
                   >
-                    {currentStatus === "HIGH ATTENTION" ||
-                    currentStatus === "WARNING" ? (
+                    {currentStatus === "PERLU PERHATIAN" ? (
                       <AlertTriangle size={14} className="shrink-0" />
                     ) : (
                       <CheckCircle size={14} className="shrink-0" />
@@ -364,65 +383,251 @@ export default function DetailBPRPage() {
             </div>
           </div>
 
-          {/* Grafik Tren Bulanan */}
+          {/* INTEGRASI KARTU EVALUASI PENGAWAS */}
+          <EvaluationCard bprList={evaluationBprList} rawApiData={allRawData} />
+
+          {/* 5 GRAFIK UTAMA PERSIS SEPERTI DASHBOARD */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div>
               <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-                Grafik Tren Kinerja Bulanan — {selectedBpr} ({selectedYear})
+                Grafik Analisis Tren Bulanan — {selectedBpr} ({selectedYear})
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Pergerakan indikator utama sepanjang tahun pilihan.
+                Visualisasi pergerakan historis bulanan parameter volume usaha
+                dan rasio kesehatan BPR.
               </p>
             </div>
 
-            <div className="h-72 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartDataYear}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="bulan"
-                    fontSize={11}
-                    stroke="#64748b"
-                    tickFormatter={(m) => namaBulanLengkap[m]?.slice(0, 3) || m}
-                  />
-                  <YAxis fontSize={11} stroke="#64748b" />
-                  <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} />
-                  <Line
-                    type="monotone"
-                    dataKey="total_aset"
-                    name="Total Aset (Jt)"
-                    stroke="#2563eb"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="total_kredit"
-                    name="Total Kredit (Jt)"
-                    stroke="#16a34a"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="dpk"
-                    name="DPK (Jt)"
-                    stroke="#9333ea"
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+              {/* 1. PERTUMBUHAN */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
+                <div className="text-xs font-bold text-slate-700">
+                  1. PERTUMBUHAN ({selectedYear}) - JT RP
+                </div>
+                <div className="flex-1 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartDataYear}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="bulan"
+                        fontSize={10}
+                        stroke="#64748b"
+                        tickFormatter={(m) =>
+                          namaBulanLengkap[m]?.slice(0, 3) || m
+                        }
+                      />
+                      <YAxis fontSize={10} stroke="#64748b" />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="dpk"
+                        name="DPK"
+                        stroke="#9333ea"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="total_aset"
+                        name="Total Aset"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="total_kredit"
+                        name="Total Kredit"
+                        stroke="#16a34a"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* 2. RISIKO KREDIT */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
+                <div className="text-xs font-bold text-slate-700">
+                  2. RISIKO KREDIT ({selectedYear}) - %
+                </div>
+                <div className="flex-1 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartDataYear}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="bulan"
+                        fontSize={10}
+                        stroke="#64748b"
+                        tickFormatter={(m) =>
+                          namaBulanLengkap[m]?.slice(0, 3) || m
+                        }
+                      />
+                      <YAxis fontSize={10} stroke="#64748b" />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="kkl_gross"
+                        name="KKL Gross"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="miapb"
+                        name="MIAPB"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="npl"
+                        name="NPL Gross"
+                        stroke="#dc2626"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* 3. RENTABILITAS */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
+                <div className="text-xs font-bold text-slate-700">
+                  3. RENTABILITAS ({selectedYear}) - %
+                </div>
+                <div className="flex-1 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartDataYear}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="bulan"
+                        fontSize={10}
+                        stroke="#64748b"
+                        tickFormatter={(m) =>
+                          namaBulanLengkap[m]?.slice(0, 3) || m
+                        }
+                      />
+                      <YAxis fontSize={10} stroke="#64748b" />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="bopo"
+                        name="BOPO"
+                        stroke="#dc2626"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="nim"
+                        name="NIM"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="roa"
+                        name="ROA"
+                        stroke="#16a34a"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* 4. LIKUIDITAS */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
+                <div className="text-xs font-bold text-slate-700">
+                  4. LIKUIDITAS ({selectedYear}) - %
+                </div>
+                <div className="flex-1 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartDataYear}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="bulan"
+                        fontSize={10}
+                        stroke="#64748b"
+                        tickFormatter={(m) =>
+                          namaBulanLengkap[m]?.slice(0, 3) || m
+                        }
+                      />
+                      <YAxis fontSize={10} stroke="#64748b" />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="cash_ratio"
+                        name="Cash Ratio"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="ldr"
+                        name="LDR"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              {/* 5. PERMODALAN / CAR (KPMM) */}
+              <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
+                <div className="text-xs font-bold text-slate-700">
+                  5. PERMODALAN / CAR (KPMM) ({selectedYear}) - %
+                </div>
+                <div className="flex-1 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartDataYear}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                      <XAxis
+                        dataKey="bulan"
+                        fontSize={10}
+                        stroke="#64748b"
+                        tickFormatter={(m) =>
+                          namaBulanLengkap[m]?.slice(0, 3) || m
+                        }
+                      />
+                      <YAxis fontSize={10} stroke="#64748b" />
+                      <Tooltip />
+                      <Legend wrapperStyle={{ fontSize: "10px" }} />
+                      <Line
+                        type="monotone"
+                        dataKey="kpmm"
+                        name="CAR / KPMM"
+                        stroke="#16a34a"
+                        strokeWidth={2.5}
+                        dot={{ r: 5 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Tabel Detail Indikator Keuangan Historis */}
+          {/* Tabel Detail Indikator Keuangan Historis (LENGKAP 12 INDIKATOR) */}
           <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
-                  Rincian Indikator Keuangan — {selectedBpr}
+                  Rincian 12 Indikator Keuangan Utama — {selectedBpr}
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
                   Perbandingan awal periode vs periode laporan (
@@ -464,11 +669,10 @@ export default function DetailBPRPage() {
                       isCurrency: true,
                     },
                     { label: "DPK (Rp juta)", key: "dpk", isCurrency: true },
-                    { label: "KPMM/CAR (%)", key: "kpmm" },
+                    { label: "KPMM / CAR (%)", key: "kpmm" },
                     { label: "NPL Gross (%)", key: "npl", alert: true },
                     { label: "KKL Gross (%)", key: "kkl_gross" },
                     { label: "MIAPB (%)", key: "miapb" },
-                    { label: "Cadangan / PPKA (%)", key: "ppka" },
                     { label: "ROA (%)", key: "roa" },
                     { label: "BOPO (%)", key: "bopo", alert: true },
                     { label: "NIM (%)", key: "nim" },

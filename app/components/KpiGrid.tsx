@@ -138,11 +138,12 @@ export default function KpiGrid({
     });
   };
 
+  // Aturan Evaluasi Berdasarkan Buku Panduan PDF ("penjelasan 12 indikator.pdf")[cite: 1]
   const kpiData: KpiItem[] = [
     {
       title: "1. Total Aset",
       value: `Rp ${totalAset.toLocaleString("id-ID")} Jt`,
-      status: "Stabil",
+      status: "Naik Stabil (Baik)",
       type: "stable",
       color: "#16a34a",
       sparkline: getYearlyAvg("total_aset", true),
@@ -150,7 +151,7 @@ export default function KpiGrid({
     {
       title: "2. Total Kredit",
       value: `Rp ${totalKredit.toLocaleString("id-ID")} Jt`,
-      status: "Tumbuh",
+      status: "Tumbuh Sehat",
       type: "increase",
       color: "#16a34a",
       sparkline: getYearlyAvg("total_kredit", true),
@@ -158,7 +159,7 @@ export default function KpiGrid({
     {
       title: "3. DPK",
       value: `Rp ${totalDpk.toLocaleString("id-ID")} Jt`,
-      status: "Stabil",
+      status: "Naik Stabil (Baik)",
       type: "stable",
       color: "#16a34a",
       sparkline: getYearlyAvg("dpk", true),
@@ -166,7 +167,7 @@ export default function KpiGrid({
     {
       title: "4. NPL Gross",
       value: `${avgNpl.toFixed(2)}%`,
-      status: avgNpl > 5 ? "Perhatian (>5%)" : "Aman (≤5%)",
+      status: avgNpl > 5 ? "Tinggi / Perlu Dicermati" : "Rendah / Sehat",
       type: avgNpl > 5 ? "decrease" : "increase",
       color: "#dc2626",
       sparkline: getYearlyAvg("npl"),
@@ -174,23 +175,23 @@ export default function KpiGrid({
     {
       title: "5. KKL Gross",
       value: `${avgKklGross.toFixed(2)}%`,
-      status: "Early Warning",
-      type: "stable",
+      status: avgKklGross > 3 ? "Sinyal Awal Memburuk" : "Terkendali",
+      type: avgKklGross > 3 ? "decrease" : "stable",
       color: "#2563eb",
       sparkline: getYearlyAvg("kkl_gross"),
     },
     {
       title: "6. MIAPB",
       value: `${avgMiapb.toFixed(2)}%`,
-      status: avgMiapb >= 200 ? "Sangat Baik" : "Normal",
-      type: "stable",
+      status: avgMiapb < 100 ? "Daya Penyangga Melemah" : "Kuat / Memadai",
+      type: avgMiapb < 100 ? "decrease" : "increase",
       color: "#2563eb",
       sparkline: getYearlyAvg("miapb"),
     },
     {
       title: "7. ROA",
       value: `${avgRoa.toFixed(2)}%`,
-      status: avgRoa >= 2 ? "Sangat Baik" : avgRoa < 0.5 ? "Kurang" : "Cukup",
+      status: avgRoa < 0.5 ? "Turun / Tertekan" : "Baik & Stabil",
       type: avgRoa < 0.5 ? "decrease" : "increase",
       color: "#2563eb",
       sparkline: getYearlyAvg("roa"),
@@ -198,7 +199,7 @@ export default function KpiGrid({
     {
       title: "8. BOPO",
       value: `${avgBopo.toFixed(2)}%`,
-      status: avgBopo > 95 ? "Tidak Efisien" : "Efisien",
+      status: avgBopo > 95 ? "Biaya Berat / Tidak Efisien" : "Efisien & Baik",
       type: avgBopo > 95 ? "decrease" : "increase",
       color: "#dc2626",
       sparkline: getYearlyAvg("bopo"),
@@ -206,23 +207,27 @@ export default function KpiGrid({
     {
       title: "9. NIM",
       value: `${avgNim.toFixed(2)}%`,
-      status: avgNim >= 10 ? "Sangat Baik" : "Normal",
-      type: "increase",
+      status: avgNim < 4 ? "Margin Menyempit" : "Sehat & Stabil",
+      type: avgNim < 4 ? "decrease" : "increase",
       color: "#16a34a",
       sparkline: getYearlyAvg("nim"),
     },
     {
       title: "10. LDR",
       value: `${avgLdr.toFixed(2)}%`,
-      status: avgLdr > 100 ? "Tekanan Likuiditas" : "Terkendali",
-      type: avgLdr > 100 ? "decrease" : "stable",
+      status:
+        avgLdr > 95
+          ? "Naik Tajam / Perlu Dicermati"
+          : "Seimbang & Proporsional",
+      type: avgLdr > 95 ? "decrease" : "stable",
       color: "#2563eb",
       sparkline: getYearlyAvg("ldr"),
     },
     {
       title: "11. Cash Ratio",
       value: `${avgCashRatio.toFixed(2)}%`,
-      status: avgCashRatio < 5 ? "Risiko (<5%)" : "Aman (≥5%)",
+      status:
+        avgCashRatio < 5 ? "Bantalan Likuiditas Lemah" : "Bantalan Memadai",
       type: avgCashRatio < 5 ? "decrease" : "increase",
       color: "#16a34a",
       sparkline: getYearlyAvg("cash_ratio"),
@@ -230,8 +235,8 @@ export default function KpiGrid({
     {
       title: "12. CAR/KPMM",
       value: `${avgCar.toFixed(2)}%`,
-      status: avgCar < 12 ? "Perhatian (<12%)" : "Kuat (≥12%)",
-      type: avgCar < 12 ? "decrease" : "stable",
+      status: avgCar < 12 ? "Risiko / Ruang Menyerap Kecil" : "Kuat & Stabil",
+      type: avgCar < 12 ? "decrease" : "increase",
       color: "#16a34a",
       sparkline: getYearlyAvg("kpmm"),
     },
@@ -251,7 +256,7 @@ export default function KpiGrid({
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             Parameter kesehatan makro dan volume usaha hasil agregasi data lokal
-            MySQL.
+            MySQL[cite: 1].
           </p>
         </div>
 
