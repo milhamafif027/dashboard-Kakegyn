@@ -1,13 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/app/lib/supabase";
 
-// Fungsi penelaah status kesehatan otomatis berdasarkan standar OJK
 function evaluateBprStatus(row: Record<string, unknown>) {
   const npl = Number(row.npl) || 0;
   const bopo = Number(row.bopo) || 0;
   const car = Number(row.kpmm ?? row.car ?? 0);
 
-  // 1. Kriteria Pengawasan Khusus / High Attention
   if (npl > 5.0 || bopo > 95.0 || (car > 0 && car < 12.0)) {
     return {
       status: "HIGH ATTENTION",
@@ -15,7 +13,6 @@ function evaluateBprStatus(row: Record<string, unknown>) {
     };
   }
 
-  // 2. Kriteria Pemantauan / Watch
   if ((npl > 3.0 && npl <= 5.0) || (bopo > 90.0 && bopo <= 95.0)) {
     return {
       status: "WATCH",
@@ -23,7 +20,6 @@ function evaluateBprStatus(row: Record<string, unknown>) {
     };
   }
 
-  // 3. Kriteria Sehat / Stable
   return {
     status: "STABLE",
     dominant_trend: "Stabil & Sehat",
@@ -62,7 +58,6 @@ export async function GET(request: Request) {
 
     const dataRows = (data || []) as Record<string, unknown>[];
 
-    // Timpa status dan tren dengan hasil kalkulasi otomatis sistem
     const processedData = dataRows.map((row) => {
       const evaluation = evaluateBprStatus(row);
       return {
@@ -112,56 +107,36 @@ export async function POST(request: Request) {
       );
     }
 
-    const sanitizedTotalAset = Math.max(0, Number(total_aset) || 0);
-    const sanitizedTotalKredit = Math.max(0, Number(total_kredit) || 0);
-    const sanitizedDpk = Math.max(0, Number(dpk) || 0);
-    const sanitizedKpmm = Number(kpmm) || 0;
-    const sanitizedNpl = Math.max(0, Number(npl) || 0);
-    const sanitizedKklGross = Math.max(0, Number(kkl_gross) || 0);
-    const sanitizedMiapb = Math.max(0, Number(miapb) || 0);
-    const sanitizedPpka = Math.max(0, Number(ppka) || 0);
-    const sanitizedRoa = Number(roa) || 0;
-    const sanitizedBopo = Math.max(0, Number(bopo) || 0);
-    const sanitizedNim = Number(nim) || 0;
-    const sanitizedLdr = Math.max(0, Number(ldr) || 0);
-    const sanitizedCashRatio = Math.max(0, Number(cash_ratio) || 0);
-    const sanitizedCar = Number(car) || 0;
-
-    // Evaluasi status otomatis sebelum disimpan
     const evaluated = evaluateBprStatus({
-      npl: sanitizedNpl,
-      bopo: sanitizedBopo,
-      kpmm: sanitizedKpmm,
-      car: sanitizedCar,
+      npl: Number(npl) || 0,
+      bopo: Number(bopo) || 0,
+      kpmm: Number(kpmm) || 0,
+      car: Number(car) || 0,
     });
 
     const payload = {
-      bpr_name,
+      bpr_name: String(bpr_name).trim(),
       tahun: Number(tahun),
       bulan: Number(bulan),
-      total_aset: sanitizedTotalAset,
-      total_kredit: sanitizedTotalKredit,
-      dpk: sanitizedDpk,
-      kpmm: sanitizedKpmm,
-      npl: sanitizedNpl,
-      kkl_gross: sanitizedKklGross,
-      miapb: sanitizedMiapb,
-      ppka: sanitizedPpka,
-      roa: sanitizedRoa,
-      bopo: sanitizedBopo,
-      nim: sanitizedNim,
-      ldr: sanitizedLdr,
-      cash_ratio: sanitizedCashRatio,
-      car: sanitizedCar,
+      total_aset: Number(total_aset) || 0,
+      total_kredit: Number(total_kredit) || 0,
+      dpk: Number(dpk) || 0,
+      kpmm: Number(kpmm) || 0,
+      npl: Number(npl) || 0,
+      kkl_gross: Number(kkl_gross) || 0,
+      miapb: Number(miapb) || 0,
+      ppka: Number(ppka) || 0,
+      roa: Number(roa) || 0,
+      bopo: Number(bopo) || 0,
+      nim: Number(nim) || 0,
+      ldr: Number(ldr) || 0,
+      cash_ratio: Number(cash_ratio) || 0,
+      car: Number(car) || Number(kpmm) || 0,
       status: evaluated.status,
       dominant_trend: evaluated.dominant_trend,
     };
 
-    // Menggunakan upsert agar data ter-update otomatis jika kombinasi bpr_name, tahun, dan bulan sudah ada
-    // (Pastikan di database Supabase Anda sudah dibuat Unique Constraint pada kolom bpr_name, tahun, bulan)
-    const { error } = await supabase
-      .from("bpr_indicators")
-      .upsert([payload], { onConflict: "bpr_name,tahun,bulan" });
+    const { error } = await supabase.from("bpr_indicators").insert([payload]);
 
     if (error) {
       throw error;
@@ -169,8 +144,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message:
-        "Data indikator bulanan berhasil disimpan dan dianalisis otomatis oleh sistem!",
+      message: "Data indikator bulanan berhasil disimpan!",
     });
   } catch (error: unknown) {
     console.error("DETAIL ERROR SUPABASE POST:", error);

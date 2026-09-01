@@ -42,7 +42,6 @@ export default function InputDataPage() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Ambil daftar nama BPR yang sudah ada di database untuk opsi dropdown menggunakan useEffect yang benar
   useEffect(() => {
     async function fetchBprNames() {
       try {
@@ -72,7 +71,6 @@ export default function InputDataPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Kalkulasi Status Pengawasan Otomatis Berdasarkan SEOJK 11/2022 & POJK 28/2023
   const calculateSystemStatus = () => {
     const npl = Number(formData.npl) || 0;
     const bopo = Number(formData.bopo) || 0;
@@ -99,7 +97,6 @@ export default function InputDataPage() {
     return "STABLE";
   };
 
-  // Kalkulasi Trend Dominan Otomatis Berdasarkan Pergerakan Parameter Risiko
   const calculateSystemTrend = () => {
     const npl = Number(formData.npl) || 0;
     const roa = Number(formData.roa) || 0;
@@ -140,7 +137,7 @@ export default function InputDataPage() {
       const result = await res.json();
       if (result.success) {
         setSuccessMessage(
-          `Data indikator BPR (${formData.bpr_name}) periode Bulan ${formData.bulan} Tahun ${formData.tahun} berhasil disimpan! (Status OJK: ${systemCalculatedStatus}, Trend: ${systemCalculatedTrend})`,
+          `Data indikator BPR (${formData.bpr_name}) periode Bulan ${formData.bulan} Tahun ${formData.tahun} berhasil disimpan!`,
         );
         setFormData((prev) => ({
           ...prev,
@@ -169,12 +166,9 @@ export default function InputDataPage() {
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none relative">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-
       <div className="flex-1 flex flex-col h-screen overflow-y-auto min-w-0">
         <Header onOpenSidebar={() => setSidebarOpen(true)} />
-
         <main className="p-4 md:p-6 space-y-6 max-w-5xl mx-auto w-full">
-          {/* Header */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
             <div>
               <div className="flex items-center space-x-2 text-blue-600 font-bold text-xs uppercase tracking-wider mb-1">
@@ -194,12 +188,10 @@ export default function InputDataPage() {
             </div>
           )}
 
-          {/* Form Input */}
           <form
             onSubmit={handleSubmit}
             className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6"
           >
-            {/* Opsi Pilih BPR & Periode */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between mb-1">
@@ -293,7 +285,6 @@ export default function InputDataPage() {
               </div>
             </div>
 
-            {/* Volume Usaha */}
             <div className="border-t border-slate-100 pt-4">
               <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-3">
                 Volume Usaha (Dalam Rp Juta)
@@ -341,7 +332,6 @@ export default function InputDataPage() {
               </div>
             </div>
 
-            {/* 11 Indikator Rasio Keuangan */}
             <div className="border-t border-slate-100 pt-4">
               <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider mb-3">
                 11 Indikator Rasio Keuangan Utama (%)
