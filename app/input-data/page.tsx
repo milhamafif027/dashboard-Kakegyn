@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import {
@@ -42,11 +42,13 @@ export default function InputDataPage() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  // Ambil daftar nama BPR yang sudah ada di database untuk opsi dropdown
-  useState(() => {
+  // Ambil daftar nama BPR yang sudah ada di database untuk opsi dropdown menggunakan useEffect yang benar
+  useEffect(() => {
     async function fetchBprNames() {
       try {
-        const res = await fetch("/api/bpr");
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/bpr`);
         const result = await res.json();
         if (result.success && result.data) {
           const names: string[] = Array.from(
@@ -62,7 +64,7 @@ export default function InputDataPage() {
       }
     }
     fetchBprNames();
-  });
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -127,7 +129,9 @@ export default function InputDataPage() {
     };
 
     try {
-      const res = await fetch("/api/bpr", {
+      const baseUrl =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const res = await fetch(`${baseUrl}/api/bpr`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
