@@ -136,6 +136,7 @@ export async function POST(request: Request) {
       dominant_trend: evaluated.dominant_trend,
     };
 
+    // Murni menggunakan insert tanpa aturan upsert/onConflict
     const { error } = await supabase.from("bpr_indicators").insert([payload]);
 
     if (error) {
