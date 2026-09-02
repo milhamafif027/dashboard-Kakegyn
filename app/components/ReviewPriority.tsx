@@ -8,7 +8,6 @@ interface ReviewItem {
   name: string;
   statusText: "PERLU PERHATIAN" | "ANALISIS LEBIH LANJUT" | "BAIK";
   rawStatus: string;
-  mainIndication: string;
   npl: number;
   bopo: number;
   roa: number;
@@ -34,9 +33,39 @@ export default function ReviewPriority() {
   const [bprList, setBprList] = useState<ReviewItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedYear, setSelectedYear] = useState<number>(2025);
-  const [selectedBulan, setSelectedBulan] = useState<number>(12);
-  const availableYears = [2021, 2022, 2023, 2024, 2025];
+  // Default disesuaikan ke 2026 dan bulan 7 (Juli) atau bulan awal data
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedBulan, setSelectedBulan] = useState<number>(7);
+  const [availableYears, setAvailableYears] = useState<number[]>([2026]);
+
+  // Ambil daftar tahun unik dari API/database saat pertama kali dimuat
+  useEffect(() => {
+    async function fetchAvailableYears() {
+      try {
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        const res = await fetch(`${baseUrl}/api/bpr`);
+        const result = await res.json();
+        if (result.success && result.data) {
+          const yearsSet = new Set<number>();
+          result.data.forEach((item: Record<string, unknown>) => {
+            const y = Number(item.tahun);
+            if (!isNaN(y) && y > 0) {
+              yearsSet.add(y);
+            }
+          });
+          if (yearsSet.size > 0) {
+            const yearsArr = Array.from(yearsSet).sort((a, b) => b - a);
+            setAvailableYears(yearsArr);
+            setSelectedYear(yearsArr[0]); // Pilih tahun terbaru secara default
+          }
+        }
+      } catch (err) {
+        console.error("Gagal memuat tahun filter:", err);
+      }
+    }
+    fetchAvailableYears();
+  }, []);
 
   useEffect(() => {
     async function fetchReviewData() {
@@ -73,6 +102,7 @@ export default function ReviewPriority() {
                 | "PERLU PERHATIAN"
                 | "ANALISIS LEBIH LANJUT"
                 | "BAIK" = "BAIK";
+
               if (
                 originalStatus === "HIGH ATTENTION" ||
                 originalStatus === "WARNING" ||
@@ -85,15 +115,6 @@ export default function ReviewPriority() {
                 mappedStatus = "BAIK";
               }
 
-              let indication = "Kinerja keuangan stabil dan sehat";
-              if (npl > 4.5 || bopo > 88) {
-                indication = `NPL ${npl.toFixed(2)}%, BOPO ${bopo.toFixed(2)}% (Perlu Atensi)`;
-              } else if (roa > 2.5) {
-                indication = `Rentabilitas kuat dengan ROA ${roa.toFixed(2)}%`;
-              } else {
-                indication = "Pertumbuhan volume usaha dan likuiditas terjaga";
-              }
-
               let rank = 3;
               if (mappedStatus === "PERLU PERHATIAN") rank = 1;
               else if (mappedStatus === "ANALISIS LEBIH LANJUT") rank = 2;
@@ -104,7 +125,6 @@ export default function ReviewPriority() {
                 name,
                 statusText: mappedStatus,
                 rawStatus: originalStatus,
-                mainIndication: indication,
                 npl,
                 bopo,
                 roa,
@@ -114,6 +134,8 @@ export default function ReviewPriority() {
 
           mapped.sort((a, b) => a.rank - b.rank);
           setBprList(mapped);
+        } else {
+          setBprList([]);
         }
       } catch (err) {
         console.error("Kesalahan jaringan saat mengambil data prioritas:", err);
@@ -180,35 +202,32 @@ export default function ReviewPriority() {
           </div>
         </div>
 
-        {/* Tabel Prioritas Review */}
+        {/* Tabel Prioritas Review (Tanpa Kolom Indikasi Utama) */}
         <div className="overflow-x-auto rounded-xl border border-slate-100 pb-1">
-          <table className="w-full text-left text-xs border-collapse min-w-[550px]">
+          <table className="w-full text-left text-xs border-collapse min-w-[400px]">
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/80 text-slate-500">
-                <th className="py-3 px-3 font-bold uppercase tracking-wider text-[11px] w-20">
+                <th className="py-3 px-3 font-bold uppercase tracking-wider text-[11px] w-24">
                   Peringkat
                 </th>
                 <th className="py-3 px-3 font-bold uppercase tracking-wider text-[11px]">
                   BPR
                 </th>
                 <th className="py-3 px-3 font-bold uppercase tracking-wider text-[11px]">
-                  Status
-                </th>
-                <th className="py-3 px-3 font-bold uppercase tracking-wider text-[11px]">
-                  Indikasi Utama
+                  Status Pengawasan
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-400">
+                  <td colSpan={3} className="py-8 text-center text-slate-400">
                     Menyinkronkan data prioritas bulanan...
                   </td>
                 </tr>
               ) : bprList.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-8 text-center text-slate-400">
+                  <td colSpan={3} className="py-8 text-center text-slate-400">
                     Tidak ada data pada periode ini.
                   </td>
                 </tr>
@@ -218,7 +237,7 @@ export default function ReviewPriority() {
                     key={bpr.id}
                     className="hover:bg-slate-50/70 transition-colors"
                   >
-                    <td className="py-3 px-3 font-bold">
+                    <td className="py-3.5 px-3 font-bold">
                       <span
                         className={`w-6 h-6 inline-flex items-center justify-center rounded-full text-white text-xs ${
                           bpr.rank === 1
@@ -231,10 +250,10 @@ export default function ReviewPriority() {
                         {bpr.rank}
                       </span>
                     </td>
-                    <td className="py-3 px-3 font-bold text-slate-800 whitespace-nowrap">
+                    <td className="py-3.5 px-3 font-bold text-slate-800 whitespace-nowrap">
                       {bpr.name}
                     </td>
-                    <td className="py-3 px-3 whitespace-nowrap">
+                    <td className="py-3.5 px-3 whitespace-nowrap">
                       <span
                         className={`inline-block px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wide ${
                           bpr.statusText === "PERLU PERHATIAN"
@@ -246,9 +265,6 @@ export default function ReviewPriority() {
                       >
                         {bpr.statusText}
                       </span>
-                    </td>
-                    <td className="py-3 px-3 text-slate-600">
-                      {bpr.mainIndication}
                     </td>
                   </tr>
                 ))
