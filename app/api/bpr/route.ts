@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Inisialisasi klien Supabase menggunakan env variables
+// Inisialisasi klien Supabase menggunakan Service Role Key agar memiliki hak penuh (bypass RLS untuk delete/update)
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  "";
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 function evaluateBprStatus(row: Record<string, unknown>) {
   const npl = Number(row.npl) || 0;
