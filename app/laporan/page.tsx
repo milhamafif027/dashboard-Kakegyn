@@ -304,7 +304,7 @@ export default function LaporanPage() {
                 {/* ISI LAPORAN */}
                 <div className="space-y-6 text-slate-700">
                   {/* Ringkasan Parameter */}
-                  <div className="space-y-2 pt-1">
+                  <div className="space-y-2 pt-1 page-break-avoid">
                     <div className="font-bold text-slate-900 text-xs">
                       1. Ringkasan Posisi Terakhir ({selectedYear})
                     </div>
@@ -367,7 +367,7 @@ export default function LaporanPage() {
                   </div>
 
                   {/* Grafik Visualisasi Bulanan (1 Tahun) */}
-                  <div className="space-y-3 pt-2">
+                  <div className="space-y-3 pt-2 page-break-avoid">
                     <div className="font-bold text-slate-900 text-xs">
                       2. Grafik Pergerakan Tren Bulanan ({selectedYear})
                     </div>
@@ -470,8 +470,8 @@ export default function LaporanPage() {
                     </div>
                   </div>
 
-                  {/* Tabel Rekapitulasi Per Bulan TANPA PPKA */}
-                  <div className="space-y-2 pt-2">
+                  {/* Tabel Rekapitulasi Per Bulan (Otomatis geser ke Halaman 2 saat dicetak) */}
+                  <div className="space-y-2 pt-4 page-break-before">
                     <div className="font-bold text-slate-900 text-xs">
                       3. Matriks Rekapitulasi Bulanan Tahun {selectedYear}
                     </div>
@@ -558,7 +558,7 @@ export default function LaporanPage() {
                   </div>
 
                   {/* Penutup Ringkas */}
-                  <div className="pt-4 flex justify-between items-center border-t border-slate-100 text-[11px] text-slate-500">
+                  <div className="pt-6 flex justify-between items-center border-t border-slate-100 text-[11px] text-slate-500 page-break-avoid">
                     <div>Dokumen Analisis Otomatis Sistem Pengawasan BPR</div>
                     <div className="text-right">
                       <div>Jakarta, {currentDate}</div>
@@ -574,24 +574,40 @@ export default function LaporanPage() {
         </main>
       </div>
 
-      {/* CSS Khusus Cetak */}
+      {/* CSS Khusus Cetak Multi-Halaman yang Aman */}
       <style jsx global>{`
         @media print {
-          body * {
-            visibility: hidden;
+          body {
+            background-color: white !important;
+            height: auto !important;
+            overflow: visible !important;
           }
-          #printable-report,
-          #printable-report * {
-            visibility: visible;
+          nav,
+          aside,
+          header,
+          .print\:hidden {
+            display: none !important;
+          }
+          main {
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            overflow: visible !important;
           }
           #printable-report {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
             border: none !important;
             box-shadow: none !important;
             padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+          }
+          .page-break-before {
+            page-break-before: always;
+            break-before: page;
+          }
+          .page-break-avoid {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
         }
       `}</style>
