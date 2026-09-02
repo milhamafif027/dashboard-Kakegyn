@@ -110,12 +110,12 @@ export default function InputDataPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
         const content = event.target?.result as string;
         if (file.name.endsWith(".json")) {
@@ -139,79 +139,141 @@ export default function InputDataPage() {
             .split(delimiter)
             .map((h) => h.trim().toLowerCase());
 
-          const dataLine = lines[1];
-          const values = dataLine.split(delimiter).map((v) => v.trim());
+          setLoading(true);
+          let successCount = 0;
+          const uploadedKeys = new Set<string>();
 
-          // Menggunakan Record<string, string | number> alih-alih any
-          const newValues: Record<string, string | number> = {};
+          // Looping seluruh baris data di file CSV secara massal
+          for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(delimiter).map((v) => v.trim());
+            if (values.length < 2) continue;
 
-          headers.forEach((header, index) => {
-            const rawVal = values[index] || "";
+            const rowData: Record<string, string | number> = {
+              bpr_name: "",
+              tahun: 2026,
+              bulan: 1,
+              total_aset: 0,
+              total_kredit: 0,
+              dpk: 0,
+              kpmm: 0,
+              npl: 0,
+              kkl_gross: 0,
+              miapb: 0,
+              roa: 0,
+              bopo: 0,
+              nim: 0,
+              ldr: 0,
+              cash_ratio: 0,
+              car: 0,
+            };
 
-            if (header.includes("bpr")) {
-              newValues["bpr_name"] = rawVal;
-            } else if (header.includes("periode")) {
-              const parts = rawVal.split(/[- ]/);
-              if (parts.length >= 2) {
-                const bulanMap: Record<string, number> = {
-                  jan: 1,
-                  feb: 2,
-                  mar: 3,
-                  apr: 4,
-                  may: 5,
-                  jun: 6,
-                  jul: 7,
-                  aug: 8,
-                  sep: 9,
-                  oct: 10,
-                  nov: 11,
-                  dec: 12,
-                };
-                const mStr = parts[0].toLowerCase().slice(0, 3);
-                if (bulanMap[mStr]) newValues["bulan"] = bulanMap[mStr];
+            headers.forEach((header, index) => {
+              const rawVal = values[index] || "";
 
-                let yStr = parts[1];
-                if (yStr.length === 2) yStr = "20" + yStr;
-                const yr = Number(yStr);
-                if (!isNaN(yr)) newValues["tahun"] = yr;
+              if (header.includes("bpr")) {
+                rowData["bpr_name"] = rawVal;
+              } else if (header.includes("periode")) {
+                const parts = rawVal.split(/[- ]/);
+                if (parts.length >= 2) {
+                  const bulanMap: Record<string, number> = {
+                    jan: 1,
+                    feb: 2,
+                    mar: 3,
+                    apr: 4,
+                    may: 5,
+                    jun: 6,
+                    jul: 7,
+                    aug: 8,
+                    sep: 9,
+                    oct: 10,
+                    nov: 11,
+                    dec: 12,
+                  };
+                  const mStr = parts[0].toLowerCase().slice(0, 3);
+                  if (bulanMap[mStr]) rowData["bulan"] = bulanMap[mStr];
+
+                  let yStr = parts[1];
+                  if (yStr.length === 2) yStr = "20" + yStr;
+                  const yr = Number(yStr);
+                  if (!isNaN(yr)) rowData["tahun"] = yr;
+                }
+              } else {
+                const cleanNum = rawVal.replace(/\./g, "").replace(",", ".");
+                const numVal = Number(cleanNum) || 0;
+
+                if (header.includes("aset")) rowData["total_aset"] = numVal;
+                else if (header.includes("kredit"))
+                  rowData["total_kredit"] = numVal;
+                else if (header.includes("dpk")) rowData["dpk"] = numVal;
+                else if (header.includes("kpmm") || header.includes("car")) {
+                  rowData["kpmm"] = numVal;
+                  rowData["car"] = numVal;
+                } else if (header.includes("npl")) rowData["npl"] = numVal;
+                else if (header.includes("kkl")) rowData["kkl_gross"] = numVal;
+                else if (header.includes("miapb")) rowData["miapb"] = numVal;
+                else if (header.includes("roa")) rowData["roa"] = numVal;
+                else if (header.includes("bopo")) rowData["bopo"] = numVal;
+                else if (header.includes("nim")) rowData["nim"] = numVal;
+                else if (header.includes("ldr")) rowData["ldr"] = numVal;
+                else if (header.includes("cash"))
+                  rowData["cash_ratio"] = numVal;
               }
-            } else {
-              const cleanNum = rawVal.replace(/\./g, "").replace(",", ".");
-              const numVal = Number(cleanNum);
+            });
 
-              if (header.includes("aset"))
-                newValues["total_aset"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("kredit"))
-                newValues["total_kredit"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("dpk"))
-                newValues["dpk"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("kpmm") || header.includes("car"))
-                newValues["kpmm"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("npl"))
-                newValues["npl"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("kkl"))
-                newValues["kkl_gross"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("miapb"))
-                newValues["miapb"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("roa"))
-                newValues["roa"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("bopo"))
-                newValues["bopo"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("nim"))
-                newValues["nim"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("ldr"))
-                newValues["ldr"] = isNaN(numVal) ? rawVal : cleanNum;
-              else if (header.includes("cash"))
-                newValues["cash_ratio"] = isNaN(numVal) ? rawVal : cleanNum;
+            if (rowData["bpr_name"]) {
+              const uniqueKey = `${rowData["bpr_name"]}-${rowData["tahun"]}-${rowData["bulan"]}`;
+              if (uploadedKeys.has(uniqueKey)) continue;
+              uploadedKeys.add(uniqueKey);
+
+              try {
+                const baseUrl =
+                  typeof window !== "undefined" ? window.location.origin : "";
+                const res = await fetch(`${baseUrl}/api/bpr`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(rowData),
+                });
+                const result = await res.json();
+                if (result.success) successCount++;
+              } catch (err) {
+                console.error("Gagal insert baris:", err);
+              }
             }
-          });
+          }
 
-          setFormData((prev) => ({ ...prev, ...newValues }));
+          setLoading(false);
           alert(
-            "File CSV berhasil dibaca dan otomatis menyesuaikan ke formulir!",
+            `Berhasil mengunggah dan memproses ${successCount} data laporan secara unik tanpa duplikasi!`,
           );
+
+          // Refresh ulang data tabel
+          const baseUrl =
+            typeof window !== "undefined" ? window.location.origin : "";
+          const refreshRes = await fetch(`${baseUrl}/api/bpr`);
+          const refreshResult = await refreshRes.json();
+          if (refreshResult.success && refreshResult.data) {
+            setAllRecords(refreshResult.data);
+            const names: string[] = Array.from(
+              new Set(
+                refreshResult.data.map(
+                  (item: BprExistingItem) => item.bpr_name,
+                ),
+              ),
+            );
+            setExistingBprs(names);
+            const years = Array.from(
+              new Set(
+                refreshResult.data.map((item: BprExistingItem) =>
+                  Number(item.tahun),
+                ),
+              ),
+            ) as number[];
+            years.sort((a, b) => b - a);
+            setAvailableYears(years);
+          }
         }
       } catch (err) {
+        setLoading(false);
         alert("Gagal memproses berkas laporan: " + err);
       }
     };
@@ -395,11 +457,11 @@ export default function InputDataPage() {
             {/* KOTAK INFORMASI PANDUAN FORMAT CSV */}
             <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Panduan Format CSV untuk Upload
+                Panduan Format CSV untuk Upload Massal
               </h3>
               <p className="text-xs text-slate-500">
-                Sistem mendukung format file CSV lama maupun baru secara
-                otomatis.
+                Sistem mendukung file CSV multi-baris secara otomatis (dengan
+                pemisah titik koma ; atau koma ,).
               </p>
               <div className="bg-slate-900 text-emerald-400 font-mono text-[10px] p-3 rounded-lg overflow-x-auto whitespace-nowrap">
                 BPR;Periode;Total Aset (Rp);Total Kredit (Rp);DPK (Rp);NPL Gross
@@ -410,7 +472,7 @@ export default function InputDataPage() {
             <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl space-y-2">
               <label className="block text-xs font-bold text-blue-900 flex items-center space-x-1.5">
                 <Upload size={14} className="text-blue-600" />
-                <span>Import Berkas Laporan (CSV / JSON Otomatis)</span>
+                <span>Import Berkas Laporan Massal (CSV / JSON Otomatis)</span>
               </label>
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <input
@@ -420,8 +482,8 @@ export default function InputDataPage() {
                   className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
                 />
                 <span className="text-[11px] text-slate-500 italic">
-                  *Unggah berkas untuk mengisi formulir indikator secara
-                  otomatis.
+                  *Unggah file CSV Anda untuk menyimpan seluruh baris data ke
+                  database secara otomatis.
                 </span>
               </div>
             </div>
