@@ -70,39 +70,6 @@ export default function InputDataPage() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const loadData = async () => {
-    try {
-      const baseUrl =
-        typeof window !== "undefined" ? window.location.origin : "";
-      const res = await fetch(`${baseUrl}/api/bpr`);
-      const result = await res.json();
-      if (result.success && result.data) {
-        setAllRecords(result.data);
-        const names: string[] = Array.from(
-          new Set(result.data.map((item: BprExistingItem) => item.bpr_name)),
-        );
-        setExistingBprs(names);
-        if (names.length > 0 && !formData.bpr_name) {
-          setFormData((prev) => ({
-            ...prev,
-            bpr_name: names[0],
-          }));
-        }
-
-        const years = Array.from(
-          new Set(
-            result.data.map((item: BprExistingItem) => Number(item.tahun)),
-          ),
-        ) as number[];
-        years.sort((a, b) => b - a);
-        setAvailableYears(years);
-      }
-    } catch (err) {
-      console.error("Gagal memuat daftar BPR:", err);
-    }
-  };
-
-  // Perbaikan: Pindahkan definisi loadData ke dalam useEffect atau bungkus dengan useCallback
   useEffect(() => {
     async function loadData() {
       try {
@@ -116,12 +83,10 @@ export default function InputDataPage() {
             new Set(result.data.map((item: BprExistingItem) => item.bpr_name)),
           );
           setExistingBprs(names);
-          if (names.length > 0 && !formData.bpr_name) {
-            setFormData((prev) => ({
-              ...prev,
-              bpr_name: names[0],
-            }));
-          }
+          setFormData((prev) => ({
+            ...prev,
+            bpr_name: prev.bpr_name || (names.length > 0 ? names[0] : ""),
+          }));
 
           const years = Array.from(
             new Set(
@@ -137,7 +102,7 @@ export default function InputDataPage() {
     }
 
     loadData();
-  }, []); 
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -158,20 +123,93 @@ export default function InputDataPage() {
           setFormData((prev) => ({ ...prev, ...parsed }));
           alert("Data berkas JSON berhasil dimuat ke formulir!");
         } else {
-          const lines = content.split("\n");
-          const newValues: Record<string, string> = {};
-          lines.forEach((line) => {
-            const parts = line.split(/[:=,\t]/);
-            if (parts.length >= 2) {
-              const key = parts[0].trim().toLowerCase();
-              const val = parts[1].trim();
-              if (key in formData) {
-                newValues[key] = val;
+          const lines = content.split("\n").filter((l) => l.trim() !== "");
+          if (lines.length < 2) {
+            alert("Format file CSV kosong atau tidak valid.");
+            return;
+          }
+
+          const headerLine = lines[0];
+          const delimiter = headerLine.includes(";")
+            ? ";"
+            : headerLine.includes("\t")
+              ? "\t"
+              : ",";
+          const headers = headerLine
+            .split(delimiter)
+            .map((h) => h.trim().toLowerCase());
+
+          const dataLine = lines[1];
+          const values = dataLine.split(delimiter).map((v) => v.trim());
+
+          // Menggunakan Record<string, string | number> alih-alih any
+          const newValues: Record<string, string | number> = {};
+
+          headers.forEach((header, index) => {
+            const rawVal = values[index] || "";
+
+            if (header.includes("bpr")) {
+              newValues["bpr_name"] = rawVal;
+            } else if (header.includes("periode")) {
+              const parts = rawVal.split(/[- ]/);
+              if (parts.length >= 2) {
+                const bulanMap: Record<string, number> = {
+                  jan: 1,
+                  feb: 2,
+                  mar: 3,
+                  apr: 4,
+                  may: 5,
+                  jun: 6,
+                  jul: 7,
+                  aug: 8,
+                  sep: 9,
+                  oct: 10,
+                  nov: 11,
+                  dec: 12,
+                };
+                const mStr = parts[0].toLowerCase().slice(0, 3);
+                if (bulanMap[mStr]) newValues["bulan"] = bulanMap[mStr];
+
+                let yStr = parts[1];
+                if (yStr.length === 2) yStr = "20" + yStr;
+                const yr = Number(yStr);
+                if (!isNaN(yr)) newValues["tahun"] = yr;
               }
+            } else {
+              const cleanNum = rawVal.replace(/\./g, "").replace(",", ".");
+              const numVal = Number(cleanNum);
+
+              if (header.includes("aset"))
+                newValues["total_aset"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("kredit"))
+                newValues["total_kredit"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("dpk"))
+                newValues["dpk"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("kpmm") || header.includes("car"))
+                newValues["kpmm"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("npl"))
+                newValues["npl"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("kkl"))
+                newValues["kkl_gross"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("miapb"))
+                newValues["miapb"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("roa"))
+                newValues["roa"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("bopo"))
+                newValues["bopo"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("nim"))
+                newValues["nim"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("ldr"))
+                newValues["ldr"] = isNaN(numVal) ? rawVal : cleanNum;
+              else if (header.includes("cash"))
+                newValues["cash_ratio"] = isNaN(numVal) ? rawVal : cleanNum;
             }
           });
+
           setFormData((prev) => ({ ...prev, ...newValues }));
-          alert("Berkas berhasil dibaca dan dipetakan ke formulir!");
+          alert(
+            "File CSV berhasil dibaca dan otomatis menyesuaikan ke formulir!",
+          );
         }
       } catch (err) {
         alert("Gagal memproses berkas laporan: " + err);
@@ -264,7 +302,11 @@ export default function InputDataPage() {
           cash_ratio: "",
         }));
 
-        await loadData();
+        const refreshRes = await fetch(`${baseUrl}/api/bpr`);
+        const refreshResult = await refreshRes.json();
+        if (refreshResult.success && refreshResult.data) {
+          setAllRecords(refreshResult.data);
+        }
       } else {
         alert("Gagal menyimpan data: " + result.error);
       }
@@ -275,7 +317,6 @@ export default function InputDataPage() {
     }
   };
 
-  // PERBAIKAN UTAMA PADA FUNGSI DELETE
   const handleDelete = async (
     id: number,
     name: string,
@@ -291,15 +332,17 @@ export default function InputDataPage() {
         const baseUrl =
           typeof window !== "undefined" ? window.location.origin : "";
 
-        // Panggil API DELETE ke server Supabase
         const res = await fetch(`${baseUrl}/api/bpr?id=${id}`, {
           method: "DELETE",
         });
         const result = await res.json();
 
         if (result.success) {
-          // Segarkan data dari server secara langsung agar sinkron
-          await loadData();
+          const refreshRes = await fetch(`${baseUrl}/api/bpr`);
+          const refreshResult = await refreshRes.json();
+          if (refreshResult.success && refreshResult.data) {
+            setAllRecords(refreshResult.data);
+          }
         } else {
           alert(
             "Gagal menghapus data di server: " +
@@ -349,6 +392,21 @@ export default function InputDataPage() {
             onSubmit={handleSubmit}
             className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6"
           >
+            {/* KOTAK INFORMASI PANDUAN FORMAT CSV */}
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl space-y-2">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                Panduan Format CSV untuk Upload
+              </h3>
+              <p className="text-xs text-slate-500">
+                Sistem mendukung format file CSV lama maupun baru secara
+                otomatis.
+              </p>
+              <div className="bg-slate-900 text-emerald-400 font-mono text-[10px] p-3 rounded-lg overflow-x-auto whitespace-nowrap">
+                BPR;Periode;Total Aset (Rp);Total Kredit (Rp);DPK (Rp);NPL Gross
+                (%);...
+              </div>
+            </div>
+
             <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl space-y-2">
               <label className="block text-xs font-bold text-blue-900 flex items-center space-x-1.5">
                 <Upload size={14} className="text-blue-600" />
