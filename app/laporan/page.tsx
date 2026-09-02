@@ -304,7 +304,7 @@ export default function LaporanPage() {
                 {/* ISI LAPORAN */}
                 <div className="space-y-6 text-slate-700">
                   {/* Ringkasan Parameter */}
-                  <div className="space-y-2 pt-1 page-break-avoid">
+                  <div className="space-y-2 pt-1 section-block">
                     <div className="font-bold text-slate-900 text-xs">
                       1. Ringkasan Posisi Terakhir ({selectedYear})
                     </div>
@@ -367,7 +367,7 @@ export default function LaporanPage() {
                   </div>
 
                   {/* Grafik Visualisasi Bulanan (1 Tahun) */}
-                  <div className="space-y-3 pt-2 page-break-avoid">
+                  <div className="space-y-3 pt-2 section-block">
                     <div className="font-bold text-slate-900 text-xs">
                       2. Grafik Pergerakan Tren Bulanan ({selectedYear})
                     </div>
@@ -470,8 +470,8 @@ export default function LaporanPage() {
                     </div>
                   </div>
 
-                  {/* Tabel Rekapitulasi Per Bulan (Otomatis geser ke Halaman 2 saat dicetak) */}
-                  <div className="space-y-2 pt-4 page-break-before">
+                  {/* Tabel Rekapitulasi Per Bulan (Mengalir Natural, Bisa Banyak Halaman) */}
+                  <div className="space-y-2 pt-4 section-block">
                     <div className="font-bold text-slate-900 text-xs">
                       3. Matriks Rekapitulasi Bulanan Tahun {selectedYear}
                     </div>
@@ -499,7 +499,10 @@ export default function LaporanPage() {
                         </thead>
                         <tbody className="divide-y divide-slate-100 font-medium">
                           {currentYearMonthlyData.map((row) => (
-                            <tr key={row.bulan} className="hover:bg-slate-50">
+                            <tr
+                              key={row.bulan}
+                              className="hover:bg-slate-50 table-row-item"
+                            >
                               <td className="py-2 px-2 text-left font-bold text-slate-900 sticky left-0 bg-white z-10">
                                 {row.bulanLabel}
                               </td>
@@ -558,7 +561,7 @@ export default function LaporanPage() {
                   </div>
 
                   {/* Penutup Ringkas */}
-                  <div className="pt-6 flex justify-between items-center border-t border-slate-100 text-[11px] text-slate-500 page-break-avoid">
+                  <div className="pt-6 flex justify-between items-center border-t border-slate-100 text-[11px] text-slate-500 section-block">
                     <div>Dokumen Analisis Otomatis Sistem Pengawasan BPR</div>
                     <div className="text-right">
                       <div>Jakarta, {currentDate}</div>
@@ -574,13 +577,20 @@ export default function LaporanPage() {
         </main>
       </div>
 
-      {/* CSS Khusus Cetak Multi-Halaman yang Mengizinkan Scroll/Paging Alami */}
+      {/* CSS Khusus Cetak Fleksibel Multi-Halaman */}
       <style jsx global>{`
         @media print {
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
           html,
           body {
+            width: 100% !important;
             height: auto !important;
             overflow: visible !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact;
           }
           nav,
           aside,
@@ -603,12 +613,13 @@ export default function LaporanPage() {
             width: 100% !important;
             height: auto !important;
             overflow: visible !important;
+            display: block !important;
           }
-          .page-break-before {
-            page-break-before: always;
-            break-before: page;
+          .section-block {
+            break-inside: avoid;
+            page-break-inside: avoid;
           }
-          .page-break-avoid {
+          .table-row-item {
             break-inside: avoid;
             page-break-inside: avoid;
           }
