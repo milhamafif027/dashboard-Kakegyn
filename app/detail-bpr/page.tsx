@@ -45,6 +45,22 @@ interface BprDetailRecord {
 
 const namaBulanLengkap = [
   "",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Ags",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+
+const namaBulanFull = [
+  "",
   "Januari",
   "Februari",
   "Maret",
@@ -66,7 +82,10 @@ export default function DetailBPRPage() {
 
   const [availableYears, setAvailableYears] = useState<number[]>([2026]);
   const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedBulan, setSelectedBulan] = useState<number>(1);
+  const [selectedBulan, setSelectedBulan] = useState<number>(7);
+
+  // State khusus filter tahun untuk Tabel 12 Indikator Bulanan penuh
+  const [tableYear, setTableYear] = useState<number>(2026);
 
   const [bprRecords, setBprRecords] = useState<BprDetailRecord[]>([]);
   const [allRawData, setAllRawData] = useState<Record<string, unknown>[]>([]);
@@ -108,6 +127,9 @@ export default function DetailBPRPage() {
           if (years.length > 0) {
             setAvailableYears(years);
             setSelectedYear((prev) =>
+              years.includes(prev) ? prev : years[years.length - 1],
+            );
+            setTableYear((prev) =>
               years.includes(prev) ? prev : years[years.length - 1],
             );
           }
@@ -156,7 +178,6 @@ export default function DetailBPRPage() {
     }
   }, [selectedBpr]);
 
-  const recordAwal = bprRecords[0];
   const recordAkhir =
     bprRecords.find(
       (r) =>
@@ -166,7 +187,6 @@ export default function DetailBPRPage() {
   const rawStatus = recordAkhir?.status || "STABLE";
   const nplVal = Number(recordAkhir?.npl || 0);
 
-  // Pemetaan label status baru yang konsisten
   let currentStatus: "PERLU PERHATIAN" | "ANALISIS LEBIH LANJUT" | "BAIK" =
     "BAIK";
   if (
@@ -185,10 +205,10 @@ export default function DetailBPRPage() {
 
   const rankMap: Record<string, number> = {
     "BPR Angga": 1,
-    "BPR Desimal": 2,
-    "BPR Makmur": 3,
-    "BPR Sejahtera": 4,
-    "BPR Lestari": 5,
+    "BPR Bromo": 2,
+    "BPR Cendana": 3,
+    "BPR Expres": 4,
+    "BPR Delta": 5,
   };
   const currentRank = rankMap[selectedBpr] || 1;
 
@@ -196,14 +216,14 @@ export default function DetailBPRPage() {
   if (selectedBpr === "BPR Angga")
     mainIndication =
       "NPL sempat meningkat pada pertengahan tahun, kini berangsur pulih.";
-  else if (selectedBpr === "BPR Desimal")
+  else if (selectedBpr === "BPR Expres")
     mainIndication = "Pertumbuhan kredit ekspansif dengan likuiditas terjaga.";
-  else if (selectedBpr === "BPR Makmur")
+  else if (selectedBpr === "BPR Cendana")
     mainIndication = "Efisiensi operasional sangat baik dengan ROA tinggi.";
-  else if (selectedBpr === "BPR Sejahtera")
+  else if (selectedBpr === "BPR Bromo")
     mainIndication =
       "Skala aset besar dengan pengawasan reguler pada kualitas aset.";
-  else if (selectedBpr === "BPR Lestari")
+  else if (selectedBpr === "BPR Delta")
     mainIndication =
       "Permodalan (CAR) sangat kuat dan likuiditas sangat sehat.";
 
@@ -215,6 +235,11 @@ export default function DetailBPRPage() {
     id: String(idx + 1),
     name: name,
   }));
+
+  // Data untuk tabel 12 indikator penuh bulan Januari - Desember pada tahun tertentu (tableYear)
+  const tableRecordsForYear = bprRecords.filter(
+    (r) => Number(r.tahun) === tableYear,
+  );
 
   return (
     <div className="flex h-screen bg-slate-100 overflow-hidden select-none">
@@ -269,7 +294,7 @@ export default function DetailBPRPage() {
             <div className="text-xs font-extrabold text-slate-700">
               Periode Evaluasi Aktif:{" "}
               <span className="text-blue-600">
-                {namaBulanLengkap[selectedBulan]} {selectedYear}
+                {namaBulanFull[selectedBulan]} {selectedYear}
               </span>
             </div>
 
@@ -283,7 +308,7 @@ export default function DetailBPRPage() {
                   onChange={(e) => setSelectedBulan(Number(e.target.value))}
                   className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
                 >
-                  {namaBulanLengkap.slice(1).map((m, idx) => (
+                  {namaBulanFull.slice(1).map((m, idx) => (
                     <option key={idx + 1} value={idx + 1}>
                       {m}
                     </option>
@@ -337,7 +362,7 @@ export default function DetailBPRPage() {
             <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
               <div>
                 <div className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">
-                  Status Pengawasan ({namaBulanLengkap[selectedBulan]}{" "}
+                  Status Pengawasan ({namaBulanFull[selectedBulan]}{" "}
                   {selectedYear})
                 </div>
                 <div className="mt-2.5">
@@ -412,9 +437,7 @@ export default function DetailBPRPage() {
                         dataKey="bulan"
                         fontSize={10}
                         stroke="#64748b"
-                        tickFormatter={(m) =>
-                          namaBulanLengkap[m]?.slice(0, 3) || m
-                        }
+                        tickFormatter={(m) => namaBulanLengkap[m] || m}
                       />
                       <YAxis fontSize={10} stroke="#64748b" />
                       <Tooltip />
@@ -461,9 +484,7 @@ export default function DetailBPRPage() {
                         dataKey="bulan"
                         fontSize={10}
                         stroke="#64748b"
-                        tickFormatter={(m) =>
-                          namaBulanLengkap[m]?.slice(0, 3) || m
-                        }
+                        tickFormatter={(m) => namaBulanLengkap[m] || m}
                       />
                       <YAxis fontSize={10} stroke="#64748b" />
                       <Tooltip />
@@ -510,9 +531,7 @@ export default function DetailBPRPage() {
                         dataKey="bulan"
                         fontSize={10}
                         stroke="#64748b"
-                        tickFormatter={(m) =>
-                          namaBulanLengkap[m]?.slice(0, 3) || m
-                        }
+                        tickFormatter={(m) => namaBulanLengkap[m] || m}
                       />
                       <YAxis fontSize={10} stroke="#64748b" />
                       <Tooltip />
@@ -559,9 +578,7 @@ export default function DetailBPRPage() {
                         dataKey="bulan"
                         fontSize={10}
                         stroke="#64748b"
-                        tickFormatter={(m) =>
-                          namaBulanLengkap[m]?.slice(0, 3) || m
-                        }
+                        tickFormatter={(m) => namaBulanLengkap[m] || m}
                       />
                       <YAxis fontSize={10} stroke="#64748b" />
                       <Tooltip />
@@ -600,9 +617,7 @@ export default function DetailBPRPage() {
                         dataKey="bulan"
                         fontSize={10}
                         stroke="#64748b"
-                        tickFormatter={(m) =>
-                          namaBulanLengkap[m]?.slice(0, 3) || m
-                        }
+                        tickFormatter={(m) => namaBulanLengkap[m] || m}
                       />
                       <YAxis fontSize={10} stroke="#64748b" />
                       <Tooltip />
@@ -622,41 +637,55 @@ export default function DetailBPRPage() {
             </div>
           </div>
 
-          {/* Tabel Detail Indikator Keuangan Historis (LENGKAP 12 INDIKATOR) */}
+          {/* Tabel Detail Indikator Keuangan Historis (LENGKAP 12 INDIKATOR - FULL JANUARI s.d. DESEMBER DENGAN FILTER TAHUN) */}
           <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
                 <h3 className="text-sm font-bold text-slate-800">
-                  Rincian 12 Indikator Keuangan Utama — {selectedBpr}
+                  Rincian 12 Indikator Keuangan Bulanan — {selectedBpr} (
+                  {tableYear})
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Perbandingan awal periode vs periode laporan (
-                  {namaBulanLengkap[selectedBulan]} {selectedYear}).
+                  Rekapitulasi lengkap dari bulan Januari sampai Desember secara
+                  kronologis.
                 </p>
               </div>
-              <span className="text-[11px] bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-xl shrink-0">
-                {loading ? "Memuat Data..." : "Database Lokal Terverifikasi"}
-              </span>
+
+              {/* Filter Tahun untuk Tabel */}
+              <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 shrink-0">
+                <Calendar size={14} className="text-slate-400" />
+                <span className="text-[11px] font-bold text-slate-500">
+                  Tahun Tabel:
+                </span>
+                <select
+                  value={tableYear}
+                  onChange={(e) => setTableYear(Number(e.target.value))}
+                  className="bg-transparent text-xs font-extrabold text-slate-800 focus:outline-none cursor-pointer"
+                >
+                  {availableYears.map((yr) => (
+                    <option key={yr} value={yr}>
+                      {yr}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-slate-100">
-              <table className="w-full text-center text-xs border-collapse min-w-[650px]">
+              <table className="w-full text-center text-[11px] border-collapse whitespace-nowrap">
                 <thead>
-                  <tr className="bg-slate-50/80 text-slate-500 border-b border-slate-200/80">
-                    <th className="py-3.5 px-4 text-left border-r border-slate-200/60 font-bold uppercase tracking-wider text-[11px]">
+                  <tr className="bg-slate-900 text-white">
+                    <th className="py-3 px-3 text-left sticky left-0 bg-slate-900 z-10 font-bold uppercase">
                       Indikator Keuangan
                     </th>
-                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-36">
-                      Nilai Awal
-                    </th>
-                    <th className="py-3.5 px-4 border-r border-slate-200/60 font-bold w-36">
-                      Nilai ({namaBulanLengkap[selectedBulan].slice(0, 3)}{" "}
-                      {selectedYear})
-                    </th>
-                    <th className="py-3.5 px-4 font-bold w-36">Arah Tren</th>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                      <th key={m} className="py-3 px-2 font-bold">
+                        {namaBulanFull[m]}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700 font-medium">
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
                   {[
                     {
                       label: "Total Aset (Rp juta)",
@@ -679,42 +708,44 @@ export default function DetailBPRPage() {
                     { label: "LDR (%)", key: "ldr" },
                     { label: "Cash Ratio (%)", key: "cash_ratio" },
                   ].map((row, idx) => {
-                    const valAwal = recordAwal
-                      ? Number(recordAwal[row.key] || 0)
-                      : 0;
-                    const valAkhir = recordAkhir
-                      ? Number(recordAkhir[row.key] || 0)
-                      : 0;
-
                     return (
                       <tr
                         key={idx}
                         className="hover:bg-slate-50/70 transition-colors"
                       >
-                        <td className="py-3 px-4 text-left font-semibold text-slate-600 border-r border-slate-100">
+                        <td className="py-2.5 px-3 text-left font-bold text-slate-800 sticky left-0 bg-white z-10 border-r border-slate-100">
                           {row.label}
                         </td>
-                        <td className="py-3 px-4 border-r border-slate-100 text-slate-600 font-semibold">
-                          {row.isCurrency
-                            ? valAwal.toLocaleString("id-ID")
-                            : valAwal.toFixed(2)}
-                        </td>
-                        <td
-                          className={`py-3 px-4 border-r border-slate-100 font-bold ${
-                            row.alert && valAkhir > (row.key === "npl" ? 5 : 95)
-                              ? "text-red-600 bg-red-50/40"
-                              : "text-slate-800"
-                          }`}
-                        >
-                          {row.isCurrency
-                            ? valAkhir.toLocaleString("id-ID")
-                            : valAkhir.toFixed(2)}
-                        </td>
-                        <td className="py-3 px-4 font-semibold">
-                          <span className="inline-block px-2.5 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600 uppercase">
-                            {currentTrend}
-                          </span>
-                        </td>
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => {
+                          const foundRecord = tableRecordsForYear.find(
+                            (r) => Number(r.bulan) === m,
+                          );
+                          const val = foundRecord
+                            ? Number(foundRecord[row.key] || 0)
+                            : 0;
+
+                          const isHighAlert =
+                            row.alert &&
+                            val > (row.key === "npl" ? 5 : 95) &&
+                            val > 0;
+
+                          return (
+                            <td
+                              key={m}
+                              className={`py-2.5 px-2 border-r border-slate-100 ${
+                                isHighAlert
+                                  ? "text-red-600 bg-red-50/60 font-bold"
+                                  : "text-slate-800"
+                              }`}
+                            >
+                              {val === 0
+                                ? "-"
+                                : row.isCurrency
+                                  ? val.toLocaleString("id-ID")
+                                  : val.toFixed(2)}
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })}

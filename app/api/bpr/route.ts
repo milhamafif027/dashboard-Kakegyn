@@ -14,20 +14,20 @@ function evaluateBprStatus(row: Record<string, unknown>) {
   if (npl > 5.0 || bopo > 95.0 || (car > 0 && car < 12.0)) {
     return {
       status: "HIGH ATTENTION",
-      dominant_trend: "Perhatian Khusus",
+      dominant_trend: "Memburuk",
     };
   }
 
   if ((npl > 3.0 && npl <= 5.0) || (bopo > 90.0 && bopo <= 95.0)) {
     return {
       status: "WATCH",
-      dominant_trend: "Fluktuatif",
+      dominant_trend: "Memburuk bertahap",
     };
   }
 
   return {
     status: "STABLE",
-    dominant_trend: "Stabil & Sehat",
+    dominant_trend: "Membaik",
   };
 }
 
@@ -40,13 +40,13 @@ export async function GET(request: Request) {
 
     let query = supabase.from("bpr_indicators").select("*");
 
-    if (tahun) {
+    if (tahun && tahun !== "ALL" && !isNaN(Number(tahun))) {
       query = query.eq("tahun", Number(tahun));
     }
-    if (bulan) {
+    if (bulan && bulan !== "ALL" && !isNaN(Number(bulan))) {
       query = query.eq("bulan", Number(bulan));
     }
-    if (bprName) {
+    if (bprName && bprName !== "ALL") {
       query = query.eq("bpr_name", bprName);
     }
 
@@ -152,9 +152,10 @@ export async function POST(request: Request) {
       dominant_trend: evaluated.dominant_trend,
     };
 
+    // Menggunakan upsert agar jika kombinasi (bpr_name, tahun, bulan) sudah ada, data diperbarui bukan duplikasi
     const { error } = await supabase
       .from("bpr_indicators")
-      .insert([insertPayload]);
+      .upsert([insertPayload], { onConflict: "bpr_name,tahun,bulan" });
 
     if (error) {
       throw error;

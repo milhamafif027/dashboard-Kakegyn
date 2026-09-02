@@ -70,6 +70,39 @@ export default function InputDataPage() {
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
+  const loadData = async () => {
+    try {
+      const baseUrl =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const res = await fetch(`${baseUrl}/api/bpr`);
+      const result = await res.json();
+      if (result.success && result.data) {
+        setAllRecords(result.data);
+        const names: string[] = Array.from(
+          new Set(result.data.map((item: BprExistingItem) => item.bpr_name)),
+        );
+        setExistingBprs(names);
+        if (names.length > 0 && !formData.bpr_name) {
+          setFormData((prev) => ({
+            ...prev,
+            bpr_name: names[0],
+          }));
+        }
+
+        const years = Array.from(
+          new Set(
+            result.data.map((item: BprExistingItem) => Number(item.tahun)),
+          ),
+        ) as number[];
+        years.sort((a, b) => b - a);
+        setAvailableYears(years);
+      }
+    } catch (err) {
+      console.error("Gagal memuat daftar BPR:", err);
+    }
+  };
+
+  // Perbaikan: Pindahkan definisi loadData ke dalam useEffect atau bungkus dengan useCallback
   useEffect(() => {
     async function loadData() {
       try {
@@ -83,10 +116,10 @@ export default function InputDataPage() {
             new Set(result.data.map((item: BprExistingItem) => item.bpr_name)),
           );
           setExistingBprs(names);
-          if (names.length > 0) {
+          if (names.length > 0 && !formData.bpr_name) {
             setFormData((prev) => ({
               ...prev,
-              bpr_name: prev.bpr_name || names[0],
+              bpr_name: names[0],
             }));
           }
 
@@ -102,8 +135,9 @@ export default function InputDataPage() {
         console.error("Gagal memuat daftar BPR:", err);
       }
     }
+
     loadData();
-  }, []);
+  }, []); 
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -111,7 +145,6 @@ export default function InputDataPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Fungsi Baru: Menangani Upload Berkas (CSV/Text Data Laporan) untuk isi form otomatis
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -120,14 +153,11 @@ export default function InputDataPage() {
     reader.onload = (event) => {
       try {
         const content = event.target?.result as string;
-        // Asumsi format file teks/CSV dengan format key:value atau baris data
-        // Contoh sederhana parsing baris per baris atau JSON
         if (file.name.endsWith(".json")) {
           const parsed = JSON.parse(content);
           setFormData((prev) => ({ ...prev, ...parsed }));
           alert("Data berkas JSON berhasil dimuat ke formulir!");
         } else {
-          // Parsing sederhana berbasis CSV / format kunci baris
           const lines = content.split("\n");
           const newValues: Record<string, string> = {};
           lines.forEach((line) => {
@@ -234,27 +264,7 @@ export default function InputDataPage() {
           cash_ratio: "",
         }));
 
-        // Refresh ulang data tabel riwayat
-        const refreshRes = await fetch(`${baseUrl}/api/bpr`);
-        const refreshResult = await refreshRes.json();
-        if (refreshResult.success && refreshResult.data) {
-          setAllRecords(refreshResult.data);
-          const names: string[] = Array.from(
-            new Set(
-              refreshResult.data.map((item: BprExistingItem) => item.bpr_name),
-            ),
-          );
-          setExistingBprs(names);
-          const years = Array.from(
-            new Set(
-              refreshResult.data.map((item: BprExistingItem) =>
-                Number(item.tahun),
-              ),
-            ),
-          ) as number[];
-          years.sort((a, b) => b - a);
-          setAvailableYears(years);
-        }
+        await loadData();
       } else {
         alert("Gagal menyimpan data: " + result.error);
       }
@@ -265,6 +275,7 @@ export default function InputDataPage() {
     }
   };
 
+  // PERBAIKAN UTAMA PADA FUNGSI DELETE
   const handleDelete = async (
     id: number,
     name: string,
@@ -273,29 +284,31 @@ export default function InputDataPage() {
   ) => {
     if (
       confirm(
-        `Apakah Anda yakin ingin menghapus data ${name} periode ${namaBulanLengkap[bulan]} ${tahun}?`,
+        `Apakah Anda yakin ingin menghapus data ${name} periode ${namaBulanLengkap[bulan]} ${tahun} secara permanen?`,
       )
     ) {
-      setAllRecords((prev) => prev.filter((item) => item.id !== id));
-
       try {
         const baseUrl =
           typeof window !== "undefined" ? window.location.origin : "";
+
+        // Panggil API DELETE ke server Supabase
         const res = await fetch(`${baseUrl}/api/bpr?id=${id}`, {
           method: "DELETE",
         });
         const result = await res.json();
 
-        if (!result.success) {
-          alert("Gagal menghapus di server: " + result.error);
-          const refreshRes = await fetch(`${baseUrl}/api/bpr`);
-          const refreshResult = await refreshRes.json();
-          if (refreshResult.success && refreshResult.data) {
-            setAllRecords(refreshResult.data);
-          }
+        if (result.success) {
+          // Segarkan data dari server secara langsung agar sinkron
+          await loadData();
+        } else {
+          alert(
+            "Gagal menghapus data di server: " +
+              (result.error || "Kesalahan tidak dikenal"),
+          );
         }
       } catch (err) {
         console.error("Kesalahan jaringan saat menghapus:", err);
+        alert("Terjadi kesalahan jaringan saat mencoba menghapus data.");
       }
     }
   };
@@ -336,7 +349,6 @@ export default function InputDataPage() {
             onSubmit={handleSubmit}
             className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6"
           >
-            {/* FITUR BARU: Input Berkas Laporan Otomatis */}
             <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl space-y-2">
               <label className="block text-xs font-bold text-blue-900 flex items-center space-x-1.5">
                 <Upload size={14} className="text-blue-600" />
