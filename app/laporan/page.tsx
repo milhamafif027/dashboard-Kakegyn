@@ -578,19 +578,16 @@ export default function LaporanPage() {
       </div>
 
       {/* CSS Khusus Cetak Fleksibel Multi-Halaman */}
+      {/* CSS Khusus Cetak Fleksibel Multi-Halaman */}
       <style jsx global>{`
         @media print {
-          @page {
-            size: A4 portrait;
-            margin: 10mm;
-          }
           html,
-          body {
-            width: 100% !important;
+          body,
+          div#__next,
+          div {
             height: auto !important;
             overflow: visible !important;
             background: white !important;
-            -webkit-print-color-adjust: exact;
           }
           nav,
           aside,
@@ -604,6 +601,7 @@ export default function LaporanPage() {
             max-width: 100% !important;
             height: auto !important;
             overflow: visible !important;
+            display: block !important;
           }
           #printable-report {
             border: none !important;
@@ -612,6 +610,7 @@ export default function LaporanPage() {
             margin: 0 !important;
             width: 100% !important;
             height: auto !important;
+            max-height: none !important;
             overflow: visible !important;
             display: block !important;
           }
