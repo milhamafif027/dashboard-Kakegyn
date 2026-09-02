@@ -10,6 +10,7 @@ import {
   Building2,
   Trash2,
   Filter,
+  Upload,
 } from "lucide-react";
 
 interface BprExistingItem {
@@ -89,7 +90,6 @@ export default function InputDataPage() {
             }));
           }
 
-          // Ekstrak daftar tahun unik untuk filter dengan tipe aman
           const years = Array.from(
             new Set(
               result.data.map((item: BprExistingItem) => Number(item.tahun)),
@@ -109,6 +109,45 @@ export default function InputDataPage() {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Fungsi Baru: Menangani Upload Berkas (CSV/Text Data Laporan) untuk isi form otomatis
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        // Asumsi format file teks/CSV dengan format key:value atau baris data
+        // Contoh sederhana parsing baris per baris atau JSON
+        if (file.name.endsWith(".json")) {
+          const parsed = JSON.parse(content);
+          setFormData((prev) => ({ ...prev, ...parsed }));
+          alert("Data berkas JSON berhasil dimuat ke formulir!");
+        } else {
+          // Parsing sederhana berbasis CSV / format kunci baris
+          const lines = content.split("\n");
+          const newValues: Record<string, string> = {};
+          lines.forEach((line) => {
+            const parts = line.split(/[:=,\t]/);
+            if (parts.length >= 2) {
+              const key = parts[0].trim().toLowerCase();
+              const val = parts[1].trim();
+              if (key in formData) {
+                newValues[key] = val;
+              }
+            }
+          });
+          setFormData((prev) => ({ ...prev, ...newValues }));
+          alert("Berkas berhasil dibaca dan dipetakan ke formulir!");
+        }
+      } catch (err) {
+        alert("Gagal memproses berkas laporan: " + err);
+      }
+    };
+    reader.readAsText(file);
   };
 
   const calculateSystemStatus = () => {
@@ -226,7 +265,7 @@ export default function InputDataPage() {
     }
   };
 
-const handleDelete = async (
+  const handleDelete = async (
     id: number,
     name: string,
     bulan: number,
@@ -237,7 +276,6 @@ const handleDelete = async (
         `Apakah Anda yakin ingin menghapus data ${name} periode ${namaBulanLengkap[bulan]} ${tahun}?`,
       )
     ) {
-      // 1. Langsung hapus dari state lokal secara instan (tanpa menunggu fetch ulang)
       setAllRecords((prev) => prev.filter((item) => item.id !== id));
 
       try {
@@ -247,13 +285,9 @@ const handleDelete = async (
           method: "DELETE",
         });
         const result = await res.json();
-        
-        if (result.success) {
-          // Data berhasil dihapus di database Supabase, state lokal sudah dibersihkan duluan.
-          console.log("Data berhasil dihapus permanen.");
-        } else {
+
+        if (!result.success) {
           alert("Gagal menghapus di server: " + result.error);
-          // Jika gagal di server, muat ulang data aslinya
           const refreshRes = await fetch(`${baseUrl}/api/bpr`);
           const refreshResult = await refreshRes.json();
           if (refreshResult.success && refreshResult.data) {
@@ -266,7 +300,6 @@ const handleDelete = async (
     }
   };
 
-  // Logika Filter Data Rekaman
   const filteredRecords = allRecords.filter((item) => {
     const matchBpr = filterBpr === "ALL" || item.bpr_name === filterBpr;
     const matchTahun =
@@ -303,6 +336,26 @@ const handleDelete = async (
             onSubmit={handleSubmit}
             className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6"
           >
+            {/* FITUR BARU: Input Berkas Laporan Otomatis */}
+            <div className="bg-blue-50/60 border border-blue-200 p-4 rounded-xl space-y-2">
+              <label className="block text-xs font-bold text-blue-900 flex items-center space-x-1.5">
+                <Upload size={14} className="text-blue-600" />
+                <span>Import Berkas Laporan (CSV / JSON Otomatis)</span>
+              </label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <input
+                  type="file"
+                  accept=".csv, .json, text/plain"
+                  onChange={handleFileUpload}
+                  className="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer"
+                />
+                <span className="text-[11px] text-slate-500 italic">
+                  *Unggah berkas untuk mengisi formulir indikator secara
+                  otomatis.
+                </span>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
               <div className="sm:col-span-2">
                 <div className="flex items-center justify-between mb-1">

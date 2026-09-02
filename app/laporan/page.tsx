@@ -574,11 +574,11 @@ export default function LaporanPage() {
         </main>
       </div>
 
-      {/* CSS Khusus Cetak Multi-Halaman yang Aman */}
+      {/* CSS Khusus Cetak Multi-Halaman yang Mengizinkan Scroll/Paging Alami */}
       <style jsx global>{`
         @media print {
+          html,
           body {
-            background-color: white !important;
             height: auto !important;
             overflow: visible !important;
           }
@@ -592,6 +592,7 @@ export default function LaporanPage() {
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
+            height: auto !important;
             overflow: visible !important;
           }
           #printable-report {
@@ -600,6 +601,8 @@ export default function LaporanPage() {
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
           }
           .page-break-before {
             page-break-before: always;
