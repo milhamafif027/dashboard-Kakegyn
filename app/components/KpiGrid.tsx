@@ -20,7 +20,7 @@ interface KpiItem {
   status: string;
   type: "increase" | "decrease" | "stable";
   color: string;
-  sparkline: { v: number }[];
+  sparkline: { v: number; label: string }[];
 }
 
 const namaBulanLengkap = [
@@ -41,7 +41,7 @@ const namaBulanLengkap = [
 
 export default function KpiGrid({
   startYear = 2021,
-  endYear = 2025,
+  endYear = 2026,
   data = [],
 }: KpiGridProps) {
   // Ekstrak daftar tahun unik dari data MySQL secara dinamis
@@ -51,7 +51,6 @@ export default function KpiGrid({
     ),
   ).sort((a, b) => a - b);
 
-  // Jika data belum termuat atau kosong, gunakan rentang cadangan dari props
   const yearsList: number[] =
     dynamicYears.length > 0
       ? dynamicYears
@@ -66,9 +65,8 @@ export default function KpiGrid({
   const defaultYear =
     yearsList.length > 0 ? yearsList[yearsList.length - 1] : endYear;
 
-  // State untuk filter tahun dan bulan aktif pada KPI Grid
   const [selectedYear, setSelectedYear] = useState<number>(defaultYear);
-  const [selectedBulan, setSelectedBulan] = useState<number>(12); // Default Desember
+  const [selectedBulan, setSelectedBulan] = useState<number>(12); // Default Desember atau bulan terakhir
 
   const activeYear = yearsList.includes(selectedYear)
     ? selectedYear
@@ -82,7 +80,7 @@ export default function KpiGrid({
     return matchYear && matchBulan;
   });
 
-  // Hitung total atau rata-rata portofolio berdasarkan data periode yang difilter
+  // Hitung total atau rata-rata portofolio
   const totalAset = filteredPeriodData.reduce(
     (acc: number, curr: Record<string, unknown>) =>
       acc + (Number(curr.total_aset) || 0),
@@ -118,27 +116,26 @@ export default function KpiGrid({
   const avgCashRatio = getAvg("cash_ratio");
   const avgCar = getAvg("kpmm") || getAvg("car");
 
-  // Helper untuk sparkline historis tahunan pada bulan yang sama
-  const getYearlyAvg = (key: string, isTotal: boolean = false) => {
-    return yearsList.map((yr) => {
-      const yrRows = data.filter((row: Record<string, unknown>) => {
-        const matchYear = Number(row.tahun) === yr;
-        const matchBulan =
-          selectedBulan === 0 ? true : Number(row.bulan) === selectedBulan;
-        return matchYear && matchBulan;
-      });
-      if (yrRows.length === 0) return { v: 0 };
-      const sum = yrRows.reduce(
-        (acc: number, curr: Record<string, unknown>) =>
-          acc + (Number(curr[key]) || 0),
-        0,
-      );
-      const val = isTotal ? sum : sum / yrRows.length;
-      return { v: +val.toFixed(2) };
-    });
+  // Helper untuk membuat sparkline tren bulanan secara kronologis pada tahun aktif
+  const getMonthlyTrend = (key: string, isTotal: boolean = false) => {
+    const months = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    return months
+      .map((m) => {
+        const monthRows = data.filter((row: Record<string, unknown>) => {
+          return Number(row.tahun) === activeYear && Number(row.bulan) === m;
+        });
+        if (monthRows.length === 0) return { v: 0, label: namaBulanLengkap[m] };
+        const sum = monthRows.reduce(
+          (acc: number, curr: Record<string, unknown>) =>
+            acc + (Number(curr[key]) || 0),
+          0,
+        );
+        const val = isTotal ? sum : sum / monthRows.length;
+        return { v: +val.toFixed(2), label: namaBulanLengkap[m] };
+      })
+      .filter((item) => item.v > 0); // Hanya ambil bulan yang memiliki data
   };
 
-  // Aturan Evaluasi Berdasarkan Buku Panduan PDF ("penjelasan 12 indikator.pdf")[cite: 1]
   const kpiData: KpiItem[] = [
     {
       title: "1. Total Aset",
@@ -146,7 +143,7 @@ export default function KpiGrid({
       status: "Naik Stabil (Baik)",
       type: "stable",
       color: "#16a34a",
-      sparkline: getYearlyAvg("total_aset", true),
+      sparkline: getMonthlyTrend("total_aset", true),
     },
     {
       title: "2. Total Kredit",
@@ -154,7 +151,7 @@ export default function KpiGrid({
       status: "Tumbuh Sehat",
       type: "increase",
       color: "#16a34a",
-      sparkline: getYearlyAvg("total_kredit", true),
+      sparkline: getMonthlyTrend("total_kredit", true),
     },
     {
       title: "3. DPK",
@@ -162,7 +159,7 @@ export default function KpiGrid({
       status: "Naik Stabil (Baik)",
       type: "stable",
       color: "#16a34a",
-      sparkline: getYearlyAvg("dpk", true),
+      sparkline: getMonthlyTrend("dpk", true),
     },
     {
       title: "4. NPL Gross",
@@ -170,7 +167,7 @@ export default function KpiGrid({
       status: avgNpl > 5 ? "Tinggi / Perlu Dicermati" : "Rendah / Sehat",
       type: avgNpl > 5 ? "decrease" : "increase",
       color: "#dc2626",
-      sparkline: getYearlyAvg("npl"),
+      sparkline: getMonthlyTrend("npl"),
     },
     {
       title: "5. KKL Gross",
@@ -178,7 +175,7 @@ export default function KpiGrid({
       status: avgKklGross > 3 ? "Sinyal Awal Memburuk" : "Terkendali",
       type: avgKklGross > 3 ? "decrease" : "stable",
       color: "#2563eb",
-      sparkline: getYearlyAvg("kkl_gross"),
+      sparkline: getMonthlyTrend("kkl_gross"),
     },
     {
       title: "6. MIAPB",
@@ -186,7 +183,7 @@ export default function KpiGrid({
       status: avgMiapb < 100 ? "Daya Penyangga Melemah" : "Kuat / Memadai",
       type: avgMiapb < 100 ? "decrease" : "increase",
       color: "#2563eb",
-      sparkline: getYearlyAvg("miapb"),
+      sparkline: getMonthlyTrend("miapb"),
     },
     {
       title: "7. ROA",
@@ -194,7 +191,7 @@ export default function KpiGrid({
       status: avgRoa < 0.5 ? "Turun / Tertekan" : "Baik & Stabil",
       type: avgRoa < 0.5 ? "decrease" : "increase",
       color: "#2563eb",
-      sparkline: getYearlyAvg("roa"),
+      sparkline: getMonthlyTrend("roa"),
     },
     {
       title: "8. BOPO",
@@ -202,7 +199,7 @@ export default function KpiGrid({
       status: avgBopo > 95 ? "Biaya Berat / Tidak Efisien" : "Efisien & Baik",
       type: avgBopo > 95 ? "decrease" : "increase",
       color: "#dc2626",
-      sparkline: getYearlyAvg("bopo"),
+      sparkline: getMonthlyTrend("bopo"),
     },
     {
       title: "9. NIM",
@@ -210,7 +207,7 @@ export default function KpiGrid({
       status: avgNim < 4 ? "Margin Menyempit" : "Sehat & Stabil",
       type: avgNim < 4 ? "decrease" : "increase",
       color: "#16a34a",
-      sparkline: getYearlyAvg("nim"),
+      sparkline: getMonthlyTrend("nim"),
     },
     {
       title: "10. LDR",
@@ -221,7 +218,7 @@ export default function KpiGrid({
           : "Seimbang & Proporsional",
       type: avgLdr > 95 ? "decrease" : "stable",
       color: "#2563eb",
-      sparkline: getYearlyAvg("ldr"),
+      sparkline: getMonthlyTrend("ldr"),
     },
     {
       title: "11. Cash Ratio",
@@ -230,7 +227,7 @@ export default function KpiGrid({
         avgCashRatio < 5 ? "Bantalan Likuiditas Lemah" : "Bantalan Memadai",
       type: avgCashRatio < 5 ? "decrease" : "increase",
       color: "#16a34a",
-      sparkline: getYearlyAvg("cash_ratio"),
+      sparkline: getMonthlyTrend("cash_ratio"),
     },
     {
       title: "12. CAR/KPMM",
@@ -238,7 +235,7 @@ export default function KpiGrid({
       status: avgCar < 12 ? "Risiko / Ruang Menyerap Kecil" : "Kuat & Stabil",
       type: avgCar < 12 ? "decrease" : "increase",
       color: "#16a34a",
-      sparkline: getYearlyAvg("kpmm"),
+      sparkline: getMonthlyTrend("kpmm"),
     },
   ];
 
