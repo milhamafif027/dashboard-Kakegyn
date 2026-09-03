@@ -358,7 +358,7 @@ export default function PerbandinganPage() {
                         : "text-slate-500 hover:text-slate-800"
                     }`}
                   >
-                    CAR
+                    Permodalan
                   </button>
                 </div>
               </div>
