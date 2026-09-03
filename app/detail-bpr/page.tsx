@@ -411,7 +411,7 @@ export default function DetailBPRPage() {
           {/* INTEGRASI KARTU EVALUASI PENGAWAS */}
           <EvaluationCard bprList={evaluationBprList} rawApiData={allRawData} />
 
-          {/* 5 GRAFIK UTAMA PERSIS SEPERTI DASHBOARD */}
+          {/* 5 GRAFIK UTAMA */}
           <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div>
               <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
@@ -471,7 +471,7 @@ export default function DetailBPRPage() {
                 </div>
               </div>
 
-              {/* 2. RISIKO KREDIT */}
+              {/* 2. RISIKO KREDIT (Tanpa MIAPB) */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
                 <div className="text-xs font-bold text-slate-700">
                   2. RISIKO KREDIT ({selectedYear}) - %
@@ -494,14 +494,6 @@ export default function DetailBPRPage() {
                         dataKey="kkl_gross"
                         name="KKL Gross"
                         stroke="#f59e0b"
-                        strokeWidth={2}
-                        dot={{ r: 4 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="miapb"
-                        name="MIAPB"
-                        stroke="#2563eb"
                         strokeWidth={2}
                         dot={{ r: 4 }}
                       />
@@ -604,10 +596,10 @@ export default function DetailBPRPage() {
                 </div>
               </div>
 
-              {/* 5. PERMODALAN / CAR (KPMM) */}
+              {/* 5. PERMODALAN & MIAPB */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
                 <div className="text-xs font-bold text-slate-700">
-                  5. PERMODALAN / CAR (KPMM) ({selectedYear}) - %
+                  5. PERMODALAN & MIAPB ({selectedYear}) - %
                 </div>
                 <div className="flex-1 w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -630,6 +622,14 @@ export default function DetailBPRPage() {
                         strokeWidth={2.5}
                         dot={{ r: 5 }}
                       />
+                      <Line
+                        type="monotone"
+                        dataKey="miapb"
+                        name="MIAPB"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                        dot={{ r: 4 }}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -637,7 +637,7 @@ export default function DetailBPRPage() {
             </div>
           </div>
 
-          {/* Tabel Detail Indikator Keuangan Historis (LENGKAP 12 INDIKATOR - FULL JANUARI s.d. DESEMBER DENGAN FILTER TAHUN) */}
+          {/* Tabel Detail Indikator Keuangan Historis (LENGKAP 12 INDIKATOR) */}
           <div className="bg-white p-4 md:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
