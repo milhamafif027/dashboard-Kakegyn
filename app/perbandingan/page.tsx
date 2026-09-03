@@ -33,7 +33,6 @@ interface BprComparisonItem {
   npl: number;
   kkl_gross: number;
   miapb: number;
-  ppka: number;
   roa: number;
   bopo: number;
   nim: number;
@@ -290,7 +289,7 @@ export default function PerbandinganPage() {
             </div>
           ) : (
             <div className="space-y-6">
-              {/* TAB KATEGORI FILTER UTAMA (TATA LETAK RAPI DENGAN WRAPPER FLEX) */}
+              {/* TAB KATEGORI FILTER UTAMA */}
               <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col gap-4">
                 <div className="flex items-center space-x-2 text-xs font-extrabold text-slate-800 uppercase tracking-wider">
                   <Building2 size={16} className="text-blue-600 shrink-0" />
@@ -364,7 +363,7 @@ export default function PerbandinganPage() {
                 </div>
               </div>
 
-              {/* TABEL MATRIKS BERDASARKAN FILTER */}
+              {/* TABEL MATRIKS TANPA PPKA */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="w-full text-center text-xs border-collapse whitespace-nowrap">
@@ -383,7 +382,6 @@ export default function PerbandinganPage() {
                             <th className="py-3 px-3">NPL Gross (%)</th>
                             <th className="py-3 px-3">KKL Gross (%)</th>
                             <th className="py-3 px-3">MIAPB (%)</th>
-                            <th className="py-3 px-3">PPKA (%)</th>
                           </>
                         )}
                         {(activeTab === "all" ||
@@ -443,9 +441,6 @@ export default function PerbandinganPage() {
                               <td className="py-3 px-3">
                                 {Number(row.miapb || 0).toFixed(2)}
                               </td>
-                              <td className="py-3 px-3">
-                                {Number(row.ppka || 0).toFixed(2)}
-                              </td>
                             </>
                           )}
                           {(activeTab === "all" ||
@@ -488,7 +483,7 @@ export default function PerbandinganPage() {
                 </div>
               </div>
 
-              {/* VISUALISASI GRAFIK YANG OTOMATIS MENGIKUTI FILTER TAB */}
+              {/* VISUALISASI GRAFIK */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div>
                   <h3 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
@@ -502,7 +497,7 @@ export default function PerbandinganPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
-                  {/* 1. PERTUMBUHAN / VOLUME USAHA */}
+                  {/* 1. VOLUME USAHA */}
                   {(activeTab === "all" || activeTab === "volume") && (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
                       <div className="text-xs font-bold text-slate-700">

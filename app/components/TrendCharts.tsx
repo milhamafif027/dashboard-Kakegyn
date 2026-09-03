@@ -55,7 +55,7 @@ export default function TrendCharts({
     (bprList && bprList.length > 0 ? bprList[0]?.name : "") ||
     "";
 
-  // Ekstrak daftar tahun unik dari data MySQL secara dinamis
+  // Ekstrak daftar tahun unik dari data secara dinamis
   const dynamicYears: number[] = Array.from(
     new Set(
       data.map((row) => Number(row.tahun)).filter((y) => !isNaN(y) && y > 0),
@@ -79,7 +79,6 @@ export default function TrendCharts({
       ? availableYears[availableYears.length - 1]
       : endYear;
 
-  // State untuk filter tahun spesifik pada grafik
   const [selectedChartYear, setSelectedChartYear] =
     useState<number>(defaultYear);
 
@@ -87,7 +86,6 @@ export default function TrendCharts({
     ? selectedChartYear
     : defaultYear;
 
-  // Ambil hanya bulan-bulan yang benar-benar memiliki data untuk BPR dan tahun aktif
   const availableMonthsForBpr = data
     .filter(
       (row) =>
@@ -96,19 +94,16 @@ export default function TrendCharts({
     .map((row) => Number(row.bulan))
     .filter((m) => !isNaN(m) && m > 0);
 
-  // Urutkan bulan secara kronologis
   const uniqueMonths = Array.from(new Set(availableMonthsForBpr)).sort(
     (a, b) => a - b,
   );
 
-  // Buat timeline data hanya berdasarkan bulan yang ada datanya
   const timelineData = uniqueMonths.map((m) => ({
     tahun: activeYear,
     bulan: m,
     label: `${namaBulan[m]} ${activeYear}`,
   }));
 
-  // Petakan data dari database untuk bulan yang tersedia saja
   const chartRawData = timelineData.map((t) => {
     const found = data.find(
       (row) =>
@@ -149,9 +144,7 @@ export default function TrendCharts({
           </p>
         </div>
 
-        {/* Baris Pilihan: Filter BPR & Filter Tahun Grafik */}
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
-          {/* Pilihan BPR */}
           <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 flex-1 sm:flex-initial">
             <span className="text-[11px] font-bold text-slate-500">
               Pilih BPR:
@@ -173,7 +166,6 @@ export default function TrendCharts({
             </select>
           </div>
 
-          {/* Pilihan Tahun Grafik (Dinamis Berdasarkan Database) */}
           <div className="flex items-center space-x-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
             <Calendar size={14} className="text-slate-400 shrink-0" />
             <span className="text-[11px] font-bold text-slate-500">Tahun:</span>
@@ -206,7 +198,7 @@ export default function TrendCharts({
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* 1. Volume Usaha */}
+          {/* 1. Pertumbuhan: Total Aset, Total Kredit, dan DPK */}
           <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
               1. Pertumbuhan ({activeYear}) - Jt Rp
@@ -248,7 +240,7 @@ export default function TrendCharts({
             </div>
           </div>
 
-          {/* 2. Risiko Kredit */}
+          {/* 2. Risiko Kredit: NPL Gross dan KKL Gross */}
           <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
               2. Risiko Kredit ({activeYear}) - %
@@ -277,20 +269,12 @@ export default function TrendCharts({
                     strokeWidth={2}
                     dot={{ r: 4 }}
                   />
-                  <Line
-                    type="monotone"
-                    dataKey="miapb"
-                    name="MIAPB"
-                    stroke="#2563eb"
-                    strokeWidth={2}
-                    dot={{ r: 4 }}
-                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </div>
 
-          {/* 3. Rentabilitas & Efisiensi */}
+          {/* 3. Rentabilitas: ROA, BOPO, dan NIM */}
           <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
               3. Rentabilitas ({activeYear}) - %
@@ -332,7 +316,7 @@ export default function TrendCharts({
             </div>
           </div>
 
-          {/* 4. Likuiditas */}
+          {/* 4. Likuiditas: Cash Ratio dan LDR */}
           <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
               4. Likuiditas ({activeYear}) - %
@@ -347,17 +331,17 @@ export default function TrendCharts({
                   <Legend wrapperStyle={{ fontSize: "11px" }} />
                   <Line
                     type="monotone"
-                    dataKey="ldr"
-                    name="LDR"
-                    stroke="#2563eb"
+                    dataKey="cash_ratio"
+                    name="Cash Ratio"
+                    stroke="#f59e0b"
                     strokeWidth={2}
                     dot={{ r: 4 }}
                   />
                   <Line
                     type="monotone"
-                    dataKey="cash_ratio"
-                    name="Cash Ratio"
-                    stroke="#f59e0b"
+                    dataKey="ldr"
+                    name="LDR"
+                    stroke="#2563eb"
                     strokeWidth={2}
                     dot={{ r: 4 }}
                   />
@@ -366,10 +350,10 @@ export default function TrendCharts({
             </div>
           </div>
 
-          {/* 5. Grafik CAR / KPMM */}
-          <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3">
+          {/* 5. Permodalan: MIAPB dan CAR/KPMM */}
+          <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200/80 space-y-3 lg:col-span-2">
             <h4 className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">
-              5. Permodalan / CAR (KPMM) ({activeYear}) - %
+              5. Permodalan ({activeYear}) - %
             </h4>
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
@@ -379,6 +363,14 @@ export default function TrendCharts({
                   <YAxis fontSize={11} stroke="#64748b" />
                   <Tooltip />
                   <Legend wrapperStyle={{ fontSize: "11px" }} />
+                  <Line
+                    type="monotone"
+                    dataKey="miapb"
+                    name="MIAPB"
+                    stroke="#2563eb"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="car"
