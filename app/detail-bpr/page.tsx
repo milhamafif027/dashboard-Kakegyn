@@ -599,7 +599,7 @@ export default function DetailBPRPage() {
               {/* 5. PERMODALAN & MIAPB */}
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
                 <div className="text-xs font-bold text-slate-700">
-                  5. PERMODALAN & MIAPB ({selectedYear}) - %
+                  5. PERMODALAN ({selectedYear}) - %
                 </div>
                 <div className="flex-1 w-full">
                   <ResponsiveContainer width="100%" height="100%">
