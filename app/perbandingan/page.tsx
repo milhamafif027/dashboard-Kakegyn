@@ -363,7 +363,7 @@ export default function PerbandinganPage() {
                 </div>
               </div>
 
-              {/* TABEL MATRIKS TANPA PPKA */}
+              {/* TABEL MATRIKS */}
               <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="w-full text-center text-xs border-collapse whitespace-nowrap">
@@ -381,7 +381,6 @@ export default function PerbandinganPage() {
                           <>
                             <th className="py-3 px-3">NPL Gross (%)</th>
                             <th className="py-3 px-3">KKL Gross (%)</th>
-                            <th className="py-3 px-3">MIAPB (%)</th>
                           </>
                         )}
                         {(activeTab === "all" ||
@@ -401,7 +400,10 @@ export default function PerbandinganPage() {
                         )}
                         {(activeTab === "all" ||
                           activeTab === "permodalan") && (
-                          <th className="py-3 px-3">KPMM/CAR (%)</th>
+                          <>
+                            <th className="py-3 px-3">KPMM/CAR (%)</th>
+                            <th className="py-3 px-3">MIAPB (%)</th>
+                          </>
                         )}
                       </tr>
                     </thead>
@@ -438,9 +440,6 @@ export default function PerbandinganPage() {
                               <td className="py-3 px-3">
                                 {Number(row.kkl_gross || 0).toFixed(2)}
                               </td>
-                              <td className="py-3 px-3">
-                                {Number(row.miapb || 0).toFixed(2)}
-                              </td>
                             </>
                           )}
                           {(activeTab === "all" ||
@@ -472,9 +471,14 @@ export default function PerbandinganPage() {
                           )}
                           {(activeTab === "all" ||
                             activeTab === "permodalan") && (
-                            <td className="py-3 px-3 font-bold text-blue-600">
-                              {Number(row.kpmm ?? row.car ?? 0).toFixed(2)}
-                            </td>
+                            <>
+                              <td className="py-3 px-3 font-bold text-blue-600">
+                                {Number(row.kpmm ?? row.car ?? 0).toFixed(2)}
+                              </td>
+                              <td className="py-3 px-3 font-bold text-slate-700">
+                                {Number(row.miapb || 0).toFixed(2)}
+                              </td>
+                            </>
                           )}
                         </tr>
                       ))}
@@ -544,7 +548,7 @@ export default function PerbandinganPage() {
                     </div>
                   )}
 
-                  {/* 2. RISIKO KREDIT */}
+                  {/* 2. RISIKO KREDIT (Tanpa MIAPB) */}
                   {(activeTab === "all" || activeTab === "risiko") && (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
                       <div className="text-xs font-bold text-slate-700">
@@ -566,14 +570,6 @@ export default function PerbandinganPage() {
                               dataKey="kkl_gross"
                               name="KKL Gross"
                               stroke="#f59e0b"
-                              strokeWidth={2}
-                              dot={{ r: 4 }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="miapb"
-                              name="MIAPB"
-                              stroke="#2563eb"
                               strokeWidth={2}
                               dot={{ r: 4 }}
                             />
@@ -677,11 +673,11 @@ export default function PerbandinganPage() {
                     </div>
                   )}
 
-                  {/* 5. PERMODALAN / CAR (KPMM) */}
+                  {/* 5. PERMODALAN & MIAPB */}
                   {(activeTab === "all" || activeTab === "permodalan") && (
                     <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 flex flex-col justify-between h-80">
                       <div className="text-xs font-bold text-slate-700">
-                        5. PERMODALAN / CAR (KPMM) ({selectedYear}) - %
+                        5. PERMODALAN & MIAPB ({selectedYear}) - %
                       </div>
                       <div className="flex-1 w-full">
                         <ResponsiveContainer width="100%" height="100%">
@@ -701,6 +697,14 @@ export default function PerbandinganPage() {
                               stroke="#16a34a"
                               strokeWidth={2.5}
                               dot={{ r: 5 }}
+                            />
+                            <Line
+                              type="monotone"
+                              dataKey="miapb"
+                              name="MIAPB"
+                              stroke="#2563eb"
+                              strokeWidth={2}
+                              dot={{ r: 4 }}
                             />
                           </LineChart>
                         </ResponsiveContainer>
